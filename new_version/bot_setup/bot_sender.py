@@ -2,7 +2,7 @@ import asyncio
 import os
 from datetime import datetime
 from new_version.bot_setup.bot_setup import bot
-from new_version.search_for_levels import coin_updates
+from new_version.search_for_levels import coin_updates, terminator
 
 sent_message_id = None
 
@@ -25,10 +25,11 @@ async def update_message_every_5_seconds(update_lock):
     """Update the message every 5 seconds with the latest coin_updates."""
     last_update = None  # Variable to track when the updates have changed
 
-    while True:
+    while not terminator.is_set():
+
         # Lock the dictionary to ensure safe access to coin_updates
         async with update_lock:
-            if coin_updates != last_update and coin_updates and datetime.now().hour > 7:  # If the updates have changed
+            if coin_updates != last_update and coin_updates:  # If the updates have changed
                 last_update = coin_updates.copy()  # Store the new updates
 
                 # Prepare the message to display

@@ -1,14 +1,24 @@
 import asyncio
+from asyncio import Event
 from datetime import datetime
 from new_version.klines import klines
 from new_version.order_book import order_book
 
 
 coin_updates = {}  # Shared updates storage
+terminator = Event()
 
+async def restarter():
+    while True:
+        if datetime.now().hour % 4 == 0 and datetime.now().minute == 0:
+            terminator.set()
+            break
+        else:
+            await asyncio.sleep(60)
 
 async def search(coin, update_lock):
-    while True:
+    while not terminator.is_set():
+
         c_room = 95  # кімната зліва
         d_room = 10  # вікно зверху і знизу стакану
 
@@ -107,4 +117,4 @@ async def search(coin, update_lock):
             async with update_lock:
                 smallest_key = min(result.keys())
                 coin_updates[coin] = result[smallest_key]  # Return the value associated with the smallest key
-        await asyncio.sleep(65)
+        await asyncio.sleep(62)
