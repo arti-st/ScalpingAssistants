@@ -1,5 +1,6 @@
 # Environment Variables
 /archive/.env
+main.env
 
 # Temporary files
 /archive/key.json
