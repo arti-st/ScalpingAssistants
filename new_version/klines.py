@@ -30,21 +30,21 @@ async def klines(symbol, frame, request_limit_length, market_type: str) -> list:
                     avg_vol = sum(c_volume) / len(c_volume)
 
                     if len(c_open) != len(c_high) or len(c_open) != len(c_low) or len(c_open) != len(c_close) or len(c_open) != len(c_volume):
-                        msg = (f"⛔️ Length error for klines data for {symbol} ({market_type}), status code {response.status}\n"
-                               f"{url}")
-                        if market_type == 'f':
+                        # msg = (f"⛔️ Length error for klines data for {symbol} ({market_type}), status code {response.status}\n"
+                        #        f"{url}")
+                        # if market_type == 'f':
                             # await send_sevice_message(msg)
-                            logging.warning(msg)
+                            # logging.warning(msg)
                         return []
                     else:
                         return [c_time, c_open, c_high, c_low, c_close, avg_vol, buy_volume, sell_volume]
 
                 else:
-                    msg = (f"⛔️ Not enough ({response_length}/{request_limit_length}) klines data for {symbol} ({market_type}), status code {response.status}\n"
-                           f"{url}")
-                    if market_type == 'f':
+                    # msg = (f"⛔️ Not enough ({response_length}/{request_limit_length}) klines data for {symbol} ({market_type}), status code {response.status}\n"
+                    #        f"{url}")
+                    # if market_type == 'f':
                         # await send_sevice_message(msg)
-                        logging.warning(msg)
+                        # logging.warning(msg)
                     return []
 
             elif response.status == 429:
@@ -54,11 +54,11 @@ async def klines(symbol, frame, request_limit_length, market_type: str) -> list:
                 exit()
 
             else:
-                msg = (f"⛔️ No klines data for {symbol} ({market_type}), status code {response.status}\n"
-                       f"{url}")
-                if market_type == 'f':
+                # msg = (f"⛔️ No klines data for {symbol} ({market_type}), status code {response.status}\n"
+                #        f"{url}")
+                # if market_type == 'f':
                     # await send_sevice_message(msg)
-                    logging.warning(msg)
+                    # logging.warning(msg)
                 return []
 
 

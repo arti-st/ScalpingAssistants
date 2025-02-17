@@ -32,21 +32,21 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
                     max_decimal = max([decimal_1, decimal_2, decimal_3])
 
                     if len(bids) == 0 or len(asks) == 0:
-                        msg = (f"⛔️ bids=0 or asks=0 for depth data for {symbol} ({market_type}), status code {response.status}\n"
-                               f"{url}")
-                        if market_type == 'f':
+                        # msg = (f"⛔️ bids=0 or asks=0 for depth data for {symbol} ({market_type}), status code {response.status}\n"
+                        #        f"{url}")
+                        # if market_type == 'f':
                             # await send_sevice_message(msg)
-                            logging.warning(msg)
+                            # logging.warning(msg)
                         return []
                     else:
                         return [close, combined_list, combined_list_sorted, max_decimal]
 
                 else:
-                    msg = (f"⛔️ Not enough ({len(response_data['bids'])}/{request_limit_length}) depth data for {symbol} ({market_type}), status code {response.status}\n"
-                           f"{url}")
-                    if market_type == 'f':
+                    # msg = (f"⛔️ Not enough ({len(response_data['bids'])}/{request_limit_length}) depth data for {symbol} ({market_type}), status code {response.status}\n"
+                    #        f"{url}")
+                    # if market_type == 'f':
                         # await send_sevice_message(msg)
-                        logging.warning(msg)
+                        # logging.warning(msg)
                     return []
 
             elif response.status == 429:
@@ -56,11 +56,11 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
                 exit()
 
             else:
-                msg = (f"⛔️ No depth data for {symbol} ({market_type}), status code {response.status}\n"
-                       f"{url}")
-                if market_type == 'f':
+                # msg = (f"⛔️ No depth data for {symbol} ({market_type}), status code {response.status}\n"
+                #        f"{url}")
+                # if market_type == 'f':
                     # await send_sevice_message(msg)
-                    logging.warning(msg)
+                    # logging.warning(msg)
                 return []
 
 # async def main():
