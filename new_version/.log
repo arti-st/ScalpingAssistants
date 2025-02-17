@@ -1,0 +1,114 @@
+2025-02-17 12:46:07,715 ERROR base_events.py : asyncio : default_exception_handler : 1821
+- Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001275D6AC290>
+2025-02-17 12:46:07,716 ERROR base_events.py : asyncio : default_exception_handler : 1821
+- Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001275D5EDAF0>, 143237.046), (<aiohttp.client_proto.ResponseHandler object at 0x000001275D5EDB50>, 143237.078), (<aiohttp.client_proto.ResponseHandler object at 0x000001275D5ED5B0>, 143237.093), (<aiohttp.client_proto.ResponseHandler object at 0x000001275D5ED970>, 143237.125), (<aiohttp.client_proto.ResponseHandler object at 0x000001275D5EE870>, 143237.156)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001275D6AC3B0>
+2025-02-17 12:49:43,774 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 12:52:41,190 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 12:52:59,056 ERROR base_events.py : asyncio : default_exception_handler : 1821
+- Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000193F1754260>
+2025-02-17 12:52:59,057 ERROR base_events.py : asyncio : default_exception_handler : 1821
+- Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x00000193F167FFB0>, 143658.375), (<aiohttp.client_proto.ResponseHandler object at 0x00000193F16BC770>, 143658.437), (<aiohttp.client_proto.ResponseHandler object at 0x00000193F16BD4F0>, 143658.468), (<aiohttp.client_proto.ResponseHandler object at 0x00000193F16BC0B0>, 143658.484), (<aiohttp.client_proto.ResponseHandler object at 0x00000193F16BC1D0>, 143658.5)])']
+connector: <aiohttp.connector.TCPConnector object at 0x00000193EFD33230>
+2025-02-17 13:03:18,627 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 13:06:07,235 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 13:06:19,296 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 13:08:53,379 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 13:12:23,188 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 13:15:13,017 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 13:15:28,620 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 13:18:52,703 DEBUG proactor_events.py : asyncio : __init__ : 634
+- Using proactor: IocpProactor
+2025-02-17 15:05:56,438 ERROR bot_service_sender.py : root : send_sevice_message : 10
+- HTTP Client says - ClientOSError: [Errno 1] [SSL: APPLICATION_DATA_AFTER_CLOSE_NOTIFY] application data after close notify (_ssl.c:2685)
+2025-02-17 15:05:56,439 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for BNXUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=BNXUSDT&limit=499
+2025-02-17 15:05:56,468 ERROR bot_service_sender.py : root : send_sevice_message : 10
+- HTTP Client says - ClientOSError: [Errno 1] [SSL: APPLICATION_DATA_AFTER_CLOSE_NOTIFY] application data after close notify (_ssl.c:2685)
+2025-02-17 15:05:56,468 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for PIPPINUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=PIPPINUSDT&limit=499
+2025-02-17 15:05:56,504 ERROR bot_service_sender.py : root : send_sevice_message : 10
+- HTTP Client says - ClientOSError: [Errno 1] [SSL: APPLICATION_DATA_AFTER_CLOSE_NOTIFY] application data after close notify (_ssl.c:2685)
+2025-02-17 15:05:56,504 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for AMBUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=AMBUSDT&limit=499
+2025-02-17 15:05:56,538 ERROR bot_service_sender.py : root : send_sevice_message : 10
+- HTTP Client says - ClientOSError: [Errno 1] [SSL: APPLICATION_DATA_AFTER_CLOSE_NOTIFY] application data after close notify (_ssl.c:2685)
+2025-02-17 15:05:56,538 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for ARCUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=ARCUSDT&limit=499
+2025-02-17 15:05:56,645 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for IPUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=IPUSDT&limit=499
+2025-02-17 15:07:00,794 ERROR bot_service_sender.py : root : send_sevice_message : 10
+- HTTP Client says - ClientOSError: [Errno 1] [SSL: APPLICATION_DATA_AFTER_CLOSE_NOTIFY] application data after close notify (_ssl.c:2685)
+2025-02-17 15:07:00,795 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for AMBUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=AMBUSDT&limit=499
+2025-02-17 15:07:00,824 ERROR bot_service_sender.py : root : send_sevice_message : 10
+- HTTP Client says - ClientOSError: [Errno 1] [SSL: APPLICATION_DATA_AFTER_CLOSE_NOTIFY] application data after close notify (_ssl.c:2685)
+2025-02-17 15:07:00,824 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for IPUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=IPUSDT&limit=499
+2025-02-17 15:07:00,856 ERROR bot_service_sender.py : root : send_sevice_message : 10
+- HTTP Client says - ClientOSError: [Errno 1] [SSL: APPLICATION_DATA_AFTER_CLOSE_NOTIFY] application data after close notify (_ssl.c:2685)
+2025-02-17 15:07:00,857 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for BNXUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=BNXUSDT&limit=499
+2025-02-17 15:07:00,890 ERROR bot_service_sender.py : root : send_sevice_message : 10
+- HTTP Client says - ClientOSError: [Errno 1] [SSL: APPLICATION_DATA_AFTER_CLOSE_NOTIFY] application data after close notify (_ssl.c:2685)
+2025-02-17 15:07:00,890 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for ARCUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=ARCUSDT&limit=499
+2025-02-17 15:07:01,040 WARNING order_book.py : root : order_book : 63
+- ⛔️ No depth data for PIPPINUSDT (f), status code 400
+https://fapi.binance.com/fapi/v1/depth?symbol=PIPPINUSDT&limit=499
+2025-02-17 15:07:01,577 WARNING search_for_levels.py : root : search : 96
+- AMBUSDT data is empty
+2025-02-17 15:07:01,602 WARNING search_for_levels.py : root : search : 96
+- IPUSDT data is empty
+2025-02-17 15:07:01,653 WARNING search_for_levels.py : root : search : 96
+- BNXUSDT data is empty
+2025-02-17 15:07:01,669 WARNING search_for_levels.py : root : search : 96
+- ARCUSDT data is empty
+2025-02-17 15:07:01,818 WARNING search_for_levels.py : root : search : 96
+- PIPPINUSDT data is empty
+2025-02-17 15:07:02,248 WARNING search_for_levels.py : root : search : 96
+- IPUSDT data is empty
+2025-02-17 15:07:02,286 WARNING search_for_levels.py : root : search : 96
+- AMBUSDT data is empty
+2025-02-17 15:07:02,308 WARNING search_for_levels.py : root : search : 96
+- ARCUSDT data is empty
+2025-02-17 15:07:02,457 WARNING search_for_levels.py : root : search : 96
+- PIPPINUSDT data is empty
+2025-02-17 15:07:58,680 WARNING search_for_levels.py : root : search : 96
+- AMBUSDT data is empty
+2025-02-17 15:07:58,699 WARNING search_for_levels.py : root : search : 96
+- ARCUSDT data is empty
+2025-02-17 15:07:58,699 WARNING search_for_levels.py : root : search : 96
+- IPUSDT data is empty
+2025-02-17 15:07:58,880 WARNING search_for_levels.py : root : search : 96
+- PIPPINUSDT data is empty
+2025-02-17 15:10:37,349 WARNING search_for_levels.py : root : search : 96
+- PIPPINUSDT s-data  is empty
+2025-02-17 15:10:37,382 WARNING search_for_levels.py : root : search : 96
+- IPUSDT s-data  is empty
+2025-02-17 15:10:37,382 WARNING search_for_levels.py : root : search : 96
+- ARCUSDT s-data  is empty
+2025-02-17 15:10:37,647 WARNING search_for_levels.py : root : search : 96
+- AMBUSDT s-data  is empty
