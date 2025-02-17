@@ -27,7 +27,6 @@ async def main():
         # Start trading tasks
         excluded = ['BTCUSDT', 'ETHUSDT']
         live_coins = await get_pairs(excluded, 'USDT', 0.05, 0.3, 60)
-
         await asyncio.sleep(30)
 
         for coin in live_coins:
@@ -35,6 +34,7 @@ async def main():
 
         await asyncio.gather(*tasks)
         terminator.clear()
+
         await send_sevice_message('All tasks terminated. Going to reload.')
         await asyncio.sleep(60)
 
