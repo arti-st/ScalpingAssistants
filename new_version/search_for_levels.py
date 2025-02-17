@@ -9,15 +9,15 @@ coin_updates = {}  # Shared updates storage
 
 async def search(coin, update_lock):
     while True:
-        c_room = 60  # кімната зліва
+        c_room = 95  # кімната зліва
         d_room = 10  # вікно зверху і знизу стакану
 
-        wiggle_room_perc = 0.003
+        wiggle_room_perc = 0.004
         atr_dis = 4.0  # мультиплікатор відстані до сайзу в ATR
         abs_dis = 0.5  # мультиплікатор відстані до сайзу %
 
         size_mpl = 2.0  # мультиплікатор максимального сайзу
-        vol_mpl = 3.0 # мультиплікатор відносності об'єму
+        vol_mpl = 5.0 # мультиплікатор відносності об'єму
 
         result = {}
 
