@@ -2,10 +2,9 @@ import asyncio
 import os
 from datetime import datetime
 from new_version.bot_setup.bot_setup import bot
-from new_version.bot_setup.coin_updates import update_lock, coin_updates
+from new_version.search_for_levels import update_lock, coin_updates
 
 sent_message_id = None
-
 
 async def sender(msg):
     """Send a new message, deleting the old one if it exists."""
@@ -29,7 +28,7 @@ async def update_message_every_5_seconds():
     while True:
         # Lock the dictionary to ensure safe access to coin_updates
         async with update_lock:
-            if coin_updates != last_update:  # If the updates have changed
+            if coin_updates != last_update and coin_updates and datetime.now().hour > 7:  # If the updates have changed
                 last_update = coin_updates.copy()  # Store the new updates
 
                 # Prepare the message to display

@@ -35,7 +35,7 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
                         msg = (f"⛔️ bids=0 or asks=0 for depth data for {symbol} ({market_type}), status code {response.status}\n"
                                f"{url}")
                         if market_type == 'f':
-                            await send_sevice_message(msg)
+                            # await send_sevice_message(msg)
                             logging.warning(msg)
                         return []
                     else:
@@ -45,7 +45,7 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
                     msg = (f"⛔️ Not enough ({len(response_data['bids'])}/{request_limit_length}) depth data for {symbol} ({market_type}), status code {response.status}\n"
                            f"{url}")
                     if market_type == 'f':
-                        await send_sevice_message(msg)
+                        # await send_sevice_message(msg)
                         logging.warning(msg)
                     return []
 
@@ -59,7 +59,7 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
                 msg = (f"⛔️ No depth data for {symbol} ({market_type}), status code {response.status}\n"
                        f"{url}")
                 if market_type == 'f':
-                    await send_sevice_message(msg)
+                    # await send_sevice_message(msg)
                     logging.warning(msg)
                 return []
 

@@ -3,7 +3,7 @@ import aiohttp
 from new_version.bot_setup.bot_service_sender import send_sevice_message
 
 
-async def klines(symbol, frame, request_limit_length, market_type: str):
+async def klines(symbol, frame, request_limit_length, market_type: str) -> list:
     futures_klines = f'https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={frame}&limit={request_limit_length}'
     spot_klines = f'https://api.binance.com/api/v3/klines?symbol={symbol}&interval={frame}&limit={request_limit_length}'
 
@@ -33,9 +33,9 @@ async def klines(symbol, frame, request_limit_length, market_type: str):
                         msg = (f"⛔️ Length error for klines data for {symbol} ({market_type}), status code {response.status}\n"
                                f"{url}")
                         if market_type == 'f':
-                            await send_sevice_message(msg)
+                            # await send_sevice_message(msg)
                             logging.warning(msg)
-                        return
+                        return []
                     else:
                         return [c_time, c_open, c_high, c_low, c_close, avg_vol, buy_volume, sell_volume]
 
@@ -43,9 +43,9 @@ async def klines(symbol, frame, request_limit_length, market_type: str):
                     msg = (f"⛔️ Not enough ({response_length}/{request_limit_length}) klines data for {symbol} ({market_type}), status code {response.status}\n"
                            f"{url}")
                     if market_type == 'f':
-                        await send_sevice_message(msg)
+                        # await send_sevice_message(msg)
                         logging.warning(msg)
-                    return
+                    return []
 
             elif response.status == 429:
                 msg = f"⛔️ {symbol} ({market_type}) LIMITS REACHED !!!! 429 CODE !!!!"
@@ -57,9 +57,9 @@ async def klines(symbol, frame, request_limit_length, market_type: str):
                 msg = (f"⛔️ No klines data for {symbol} ({market_type}), status code {response.status}\n"
                        f"{url}")
                 if market_type == 'f':
-                    await send_sevice_message(msg)
+                    # await send_sevice_message(msg)
                     logging.warning(msg)
-                return
+                return []
 
 
 # async def main():

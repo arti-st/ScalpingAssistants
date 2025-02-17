@@ -1,9 +1,11 @@
 import asyncio
 from datetime import datetime
 from new_version.klines import klines
-from new_version.bot_setup.coin_updates import update_lock, coin_updates
 from new_version.order_book import order_book
 
+
+coin_updates = {}  # Shared updates storage
+update_lock = asyncio.Lock()  # Lock to prevent race conditions
 
 
 async def search(coin):
