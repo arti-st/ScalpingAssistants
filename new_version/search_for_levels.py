@@ -5,10 +5,9 @@ from new_version.order_book import order_book
 
 
 coin_updates = {}  # Shared updates storage
-update_lock = asyncio.Lock()  # Lock to prevent race conditions
 
 
-async def search(coin):
+async def search(coin, update_lock):
     while True:
         c_room = 60  # кімната зліва
         d_room = 10  # вікно зверху і знизу стакану

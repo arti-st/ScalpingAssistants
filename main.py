@@ -12,10 +12,10 @@ from new_version.bot_setup.bot_sender import update_message_every_5_seconds
 
 
 async def main():
+    update_lock = asyncio.Lock()
 
     # Start the background update task
-
-    tasks = [asyncio.create_task(update_message_every_5_seconds())]
+    tasks = [asyncio.create_task(update_message_every_5_seconds(update_lock))]
 
     # Start trading tasks
     excluded = ['BTCUSDT', 'ETHUSDT']
@@ -24,7 +24,7 @@ async def main():
     await asyncio.sleep(30)
 
     for coin in live_coins:
-        tasks.append(asyncio.create_task(search(coin)))
+        tasks.append(asyncio.create_task(search(coin, update_lock,)))
 
     await asyncio.gather(*tasks)
 

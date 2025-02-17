@@ -2,7 +2,7 @@ import asyncio
 import os
 from datetime import datetime
 from new_version.bot_setup.bot_setup import bot
-from new_version.search_for_levels import update_lock, coin_updates
+from new_version.search_for_levels import coin_updates
 
 sent_message_id = None
 
@@ -21,7 +21,7 @@ async def sender(msg):
         await bot.session.close()
 
 
-async def update_message_every_5_seconds():
+async def update_message_every_5_seconds(update_lock):
     """Update the message every 5 seconds with the latest coin_updates."""
     last_update = None  # Variable to track when the updates have changed
 
