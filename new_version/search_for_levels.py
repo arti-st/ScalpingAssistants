@@ -4,9 +4,20 @@ from datetime import datetime
 from new_version.klines import klines
 from new_version.order_book import order_book
 
-
 coin_updates = {}  # Shared updates storage
 terminator = Event()
+
+c_room = 95  # кімната зліва
+d_room = 10  # вікно зверху і знизу стакану
+
+wiggle_room_perc = 0.004
+atr_dis = 4.0  # мультиплікатор відстані до сайзу в ATR
+abs_dis = 0.5  # мультиплікатор відстані до сайзу %
+
+size_mpl = 2.0  # мультиплікатор максимального сайзу
+vol_mpl_chart = 3.0  # мультиплікатор відносності об'єму
+vol_mpl_depth = 8.0  # мультиплікатор відносності об'єму якщо перевіряємо тільки сайз
+
 
 async def restarter():
     while True:
@@ -16,95 +27,115 @@ async def restarter():
         else:
             await asyncio.sleep(60)
 
-async def search(coin, update_lock):
-    while not terminator.is_set():
 
-        c_room = 95  # кімната зліва
-        d_room = 10  # вікно зверху і знизу стакану
+async def distance_calculator(current_extremum, bar_close) -> float:
+    distance_per = abs(current_extremum - bar_close) / (max(current_extremum, bar_close) / 100)
+    distance_per = float('{:.2f}'.format(distance_per))
+    return round(distance_per, 2)
 
-        wiggle_room_perc = 0.004
-        atr_dis = 4.0  # мультиплікатор відстані до сайзу в ATR
-        abs_dis = 0.5  # мультиплікатор відстані до сайзу %
 
-        size_mpl = 2.0  # мультиплікатор максимального сайзу
-        vol_mpl = 5.0 # мультиплікатор відносності об'єму
+async def extremum_verification(
+        coin: str,
+        market_type: str,
+        current_extremum: float or None,
+        bar_close: float,
+        avg_atr_per: float,
+        depth: list,
+        avg_vol: float,
+        result: dict
+):
+    vol_mpl = vol_mpl_chart if current_extremum else vol_mpl_depth
 
-        result = {}
+    for item in depth:
+        distance_per = await distance_calculator(item[0], bar_close)
+        distances_verified = distance_per <= atr_dis * avg_atr_per and distance_per <= abs_dis
 
-        for market_type in ["f", "s"]:
+        if current_extremum:
+            wiggle_high = current_extremum * (1 + wiggle_room_perc)
+            wiggle_low = current_extremum * (1 - wiggle_room_perc)
+            size_location_verified = wiggle_low <= item[0] <= wiggle_high
+        else:
+            size_location_verified = True
+
+        size_withing_nines = d_room - 1 < depth.index(item) < len(depth) - d_room  # щільність знаходиться між 9-ю спочатку, 9-ю з кінця
+        size_volume_verified = item[1] >= avg_vol * vol_mpl
+
+        # щільність знаходиться між 9-ю спочатку, 9-ю з кінця та ціна щільності == лою
+        if all([distances_verified, size_location_verified, size_withing_nines, size_volume_verified]):
             market_type_verbose = 'FUTURES' if market_type == 'f' else 'SPOT'
 
+            # сайзи між ціною щільності -10 та ціною щільності
+            lower_sizes = [depth[k][1] for k in range(depth.index(item) - d_room, depth.index(item))]
+            # сайзи між ціною щільності +10 та ціною щільності
+            higher_sizes = [depth[k][1] for k in range(depth.index(item) + 1, depth.index(item) + d_room + 1)]
+
+            if all(item[1] >= dom * size_mpl for dom in lower_sizes + higher_sizes):
+                if current_extremum:
+                    print(f'{coin} {market_type_verbose} found CHART extr! {item[0]}!')
+                    direction = '↗️' if item[0] >= bar_close else '↘️'
+                else:
+                    print(f'{coin} {market_type_verbose} found DEPTH extr! {item[0]}!')
+                    direction = '⬆️' if item[0] >= bar_close else '⬇️'
+
+                result[distance_per] = (
+                    f"{datetime.now().strftime('%H:%M:%S')} "
+                    f"{coin} "
+                    f"{market_type_verbose}: "
+                    f"{direction} {distance_per}% "
+                    f"{item[0]}, "
+                    f"x{round(item[1] / avg_vol, 1)}"
+                )
+
+
+async def search(coin, update_lock):
+    while not terminator.is_set():
+        result = {}
+        for market_type in ["f", "s"]:
             depth = await order_book(coin, 500, market_type)
             the_klines = await klines(coin, "1m", 100, market_type)
-
             if len(depth) > 0 and len(the_klines) > 0:
-
                 c_time, c_open, c_high, c_low, c_close, avg_vol = the_klines[0], the_klines[1], the_klines[2], the_klines[3], the_klines[4], the_klines[5]
                 depth = depth[1]  # [ціна, об'єм]
-
                 avg_atr_per = [(c_high[-c] - c_low[-c]) / (c_close[-c] / 100) for c in range(30)]
                 avg_atr_per = float('{:.2f}'.format(sum(avg_atr_per) / len(avg_atr_per)))
 
                 # пошук екстремуму, а потім сайзу на ньому
                 for i in range(2, len(c_low) - c_room):
 
-                    # дистанція до ціни
-                    distance_per = abs(c_high[-i] - c_close[-1]) / (c_close[-1] / 100)
-                    distance_per = float('{:.2f}'.format(distance_per))
+                    if c_high[-i] >= max(c_high[-1: -i - c_room: -1]):
+                        await extremum_verification(
+                            coin,
+                            market_type,
+                            c_high[-i],
+                            c_close[-1],
+                            avg_atr_per,
+                            depth,
+                            avg_vol,
+                            result
+                        )
 
-                    if c_high[-i] >= max(c_high[-1: -i - c_room: -1]) and distance_per <= atr_dis * avg_atr_per and distance_per <= abs_dis:
-                        for item in depth:
-                            wiggle_high = c_high[-i] * (1 + wiggle_room_perc)
-                            wiggle_low = c_high[-i] * (1 - wiggle_room_perc)
-                            # щільність знаходиться між 9-ю спочатку, 9-ю з кінця та ціна щільності == хаю
-                            if d_room - 1 < depth.index(item) < len(depth) - d_room and wiggle_low <= item[0] <= wiggle_high:
-                                # сайзи між ціною щільності -10 та ціною щільності
-                                lower_sizes = [depth[k][1] for k in range(depth.index(item) - d_room, depth.index(item))]
-                                # сайзи між ціною щільності +10 та ціною щільності
-                                higher_sizes = [depth[k][1] for k in range(depth.index(item) + 1, depth.index(item) + d_room + 1)]
+                    if c_low[-i] <= min(c_low[-1: -i - c_room: -1]):
+                        await extremum_verification(
+                            coin,
+                            market_type,
+                            c_low[-i],
+                            c_close[-1],
+                            avg_atr_per,
+                            depth,
+                            avg_vol,
+                            result
+                        )
 
-                                if all(item[1] >= dom * size_mpl for dom in lower_sizes + higher_sizes) and item[1] >= avg_vol * vol_mpl:
-                                    print(f'{coin} {market_type_verbose} found high extr: {c_high[-i]}!')
-                                    direction = '🔼' if item[0] >= c_close[-1] else '🔽'
-                                    result[round(distance_per, 2)] = (
-                                        f"{datetime.now().strftime('%H:%M:%S')} "
-                                        f"{coin} "
-                                        f"{market_type_verbose}: "
-                                        f"{direction} {round(distance_per, 2)}% "
-                                        f"{item[0]}, "
-                                        f"x{round(item[1] / avg_vol, 1)}"
-                                    )
-                                # break
-
-                    # дистанція до ціни
-                    distance_per = abs(c_low[-i] - c_close[-1]) / (c_close[-1] / 100)
-                    distance_per = float('{:.2f}'.format(distance_per))
-
-                    if c_low[-i] <= min(c_low[-1: -i - c_room: -1]) and distance_per <= atr_dis * avg_atr_per and distance_per <= abs_dis:
-                        for item in depth:
-                            wiggle_high = c_low[-i] * (1 + wiggle_room_perc)
-                            wiggle_low = c_low[-i] * (1 - wiggle_room_perc)
-                            # щільність знаходиться між 9-ю спочатку, 9-ю з кінця та ціна щільності == лою
-                            if d_room - 1 < depth.index(item) < len(depth) - d_room and wiggle_low <= item[0] <= wiggle_high:
-                                # сайзи між ціною щільності -10 та ціною щільності
-                                lower_sizes = [depth[k][1] for k in range(depth.index(item) - d_room, depth.index(item))]
-                                # сайзи між ціною щільності +10 та ціною щільності
-                                higher_sizes = [depth[k][1] for k in range(depth.index(item) + 1, depth.index(item) + d_room + 1)]
-
-                                if all(item[1] >= dom * size_mpl for dom in lower_sizes + higher_sizes) and item[1] >= avg_vol * vol_mpl:
-                                    print(f'{coin} {market_type_verbose} found low extr: {c_low[-i]}!')
-                                    direction = '🔼' if item[0] >= c_close[-1] else '🔽'
-                                    result[round(distance_per, 2)] = (
-                                        f"{datetime.now().strftime('%H:%M:%S')} "
-                                        f"{coin} "
-                                        f"{market_type_verbose}: "
-                                        f"{direction} {round(distance_per, 2)}% "
-                                        f"{item[0]}, "
-                                        f"x{round(item[1] / avg_vol, 1)}"
-                                    )
-                                # break
-            # else:
-            #     logging.warning(f'{symbol} {market_type}-data  is empty')
+                await extremum_verification(
+                    coin,
+                    market_type,
+                    None,
+                    c_close[-1],
+                    avg_atr_per,
+                    depth,
+                    avg_vol,
+                    result
+                )
 
         if len(result) == 0:
             async with update_lock:
