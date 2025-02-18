@@ -18,17 +18,6 @@ async def main():
     update_lock = asyncio.Lock()
 
     while True:
-        msg = (f"Restarting with following parameters:\n\n"
-               f"Room to the left: {c_room}\n"
-               f"Room upper/lower in DOM: {d_room}\n"
-               f"Wiggle room: {wiggle_room_perc*100}%\n\n"
-               f"ATR distance mpl: x{atr_dis}\n"
-               f"Absolute dis: {abs_dis}%\n\n"
-               f"Size among others: x{size_mpl}\n"
-               f"Size x Vol mpl (chart): x{vol_mpl_chart}\n"
-               f"Size x Vol mpl (DOM): x{vol_mpl_depth}")
-        await send_sevice_message(msg)
-
         # Start the background update task
         tasks = [
             asyncio.create_task(update_message_every_5_seconds(update_lock)),
@@ -38,6 +27,18 @@ async def main():
         # Start trading tasks
         excluded = ['BTCUSDT', 'ETHUSDT']
         live_coins = await get_pairs(excluded, 'USDT', 0.05, 0.3, 60)
+
+        msg = (f"Restarting with following parameters:\n\n"
+               f"Room to the left: {c_room}\n"
+               f"Room upper/lower in DOM: {d_room}\n"
+               f"Wiggle room: {wiggle_room_perc*100}%\n\n"
+               f"ATR distance mpl: x{atr_dis}\n"
+               f"Absolute dis: {abs_dis}%\n\n"
+               f"Size among others: x{size_mpl}\n"
+               f"Size x Vol mpl (chart): x{vol_mpl_chart}\n"
+               f"Size x Vol mpl (DOM): x{vol_mpl_depth}\n\n"
+               f"Coins found: {len(live_coins)}")
+        await send_sevice_message(msg)
         await asyncio.sleep(30)
 
         for coin in live_coins:
