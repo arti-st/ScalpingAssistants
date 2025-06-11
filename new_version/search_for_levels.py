@@ -7,12 +7,12 @@ from new_version.order_book import order_book
 coin_updates = {}  # Shared updates storage
 terminator = Event()
 
-c_room = 95  # кімната зліва
+c_room = 30  # кімната зліва
 d_room = 10  # вікно зверху і знизу стакану
 
-wiggle_room_perc = 0.004
+wiggle_room_perc = 0.005
 atr_dis = 4.0  # мультиплікатор відстані до сайзу в ATR
-abs_dis = 0.5  # мультиплікатор відстані до сайзу %
+abs_dis = 0.7  # мультиплікатор відстані до сайзу %
 
 size_mpl = 2.0  # мультиплікатор максимального сайзу
 vol_mpl_chart = 3.0  # мультиплікатор відносності об'єму
@@ -21,7 +21,7 @@ vol_mpl_depth = 8.0  # мультиплікатор відносності об'
 
 async def restarter():
     while True:
-        if datetime.now().hour % 4 == 0 and datetime.now().minute == 0:
+        if datetime.now().hour % 2 == 0 and datetime.now().minute == 0:
             terminator.set()
             break
         else:
@@ -92,7 +92,7 @@ async def search(coin, update_lock):
         result = {}
         for market_type in ["f", "s"]:
             depth = await order_book(coin, 500, market_type)
-            the_klines = await klines(coin, "1m", 100, market_type)
+            the_klines = await klines(coin, "1m", 240, market_type)
             if len(depth) > 0 and len(the_klines) > 0:
                 c_time, c_open, c_high, c_low, c_close, avg_vol = the_klines[0], the_klines[1], the_klines[2], the_klines[3], the_klines[4], the_klines[5]
                 depth = depth[1]  # [ціна, об'єм]
@@ -101,7 +101,6 @@ async def search(coin, update_lock):
 
                 # пошук екстремуму, а потім сайзу на ньому
                 for i in range(2, len(c_low) - c_room):
-
                     if c_high[-i] >= max(c_high[-1: -i - c_room: -1]):
                         await extremum_verification(
                             coin,
