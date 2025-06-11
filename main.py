@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv('main.env')
+load_dotenv('params.env')
 
 from main_log_config import setup_logger
 setup_logger(os.path.dirname(__file__))
@@ -26,7 +27,7 @@ async def main():
 
         # Start trading tasks
         excluded = ['BTCUSDT', 'ETHUSDT']
-        live_coins = await get_pairs(excluded, 'USDT', 0.05, 0.3, 60)
+        live_coins = await get_pairs(excluded, 'USDT')
 
         msg = (f"Restarting with following parameters:\n\n"
                f"Room to the left: {c_room}\n"

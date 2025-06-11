@@ -1,3 +1,5 @@
+import os
+
 import aiohttp
 import asyncio
 
@@ -32,7 +34,11 @@ async def split_dict(input_dict, num_parts):
     return [{k: input_dict[k] for k in keys[i * avg + min(i, remainder):(i + 1) * avg + min(i + 1, remainder)]} for i in range(num_parts)]
 
 
-async def get_pairs(excluded, asset, ticksize_filter, atr_filter, pairs_limit):
+async def get_pairs(excluded, asset):
+    ticksize_filter = float(os.getenv("TICKSIZE_FILTER", 0.05))
+    atr_filter = float(os.getenv("ATR_FILTER", 0.3))
+    pairs_limit = int(os.getenv("PAIRS_LIMIT", 60))
+
     async with aiohttp.ClientSession() as session:
         exchange_info = await fetch_klines(session, "https://fapi.binance.com/fapi/v1/exchangeInfo")
         ts_dict = {d['symbol']: d['filters'][0]['tickSize'] for d in exchange_info['symbols'] if d['quoteAsset'] == asset and d['symbol'] not in excluded}

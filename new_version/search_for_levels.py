@@ -1,4 +1,5 @@
 import asyncio
+import os
 from asyncio import Event
 from datetime import datetime
 from new_version.klines import klines
@@ -7,16 +8,16 @@ from new_version.order_book import order_book
 coin_updates = {}  # Shared updates storage
 terminator = Event()
 
-c_room = 30  # кімната зліва
-d_room = 10  # вікно зверху і знизу стакану
+c_room = int(os.getenv("C_ROOM", 30))
+d_room = int(os.getenv("D_ROOM", 10))
 
-wiggle_room_perc = 0.005
-atr_dis = 4.0  # мультиплікатор відстані до сайзу в ATR
-abs_dis = 0.7  # мультиплікатор відстані до сайзу %
+wiggle_room_perc = float(os.getenv("WIGGLE_ROOM_PERC", 0.005))
+atr_dis = float(os.getenv("ATR_DIS", 4.0))
+abs_dis = float(os.getenv("ABS_DIS", 0.7))
 
-size_mpl = 2.0  # мультиплікатор максимального сайзу
-vol_mpl_chart = 3.0  # мультиплікатор відносності об'єму
-vol_mpl_depth = 8.0  # мультиплікатор відносності об'єму якщо перевіряємо тільки сайз
+size_mpl = float(os.getenv("SIZE_MPL", 2.0))
+vol_mpl_chart = float(os.getenv("VOL_MPL_CHART", 3.0))
+vol_mpl_depth = float(os.getenv("VOL_MPL_DEPTH", 8.0))
 
 
 async def restarter():
@@ -83,7 +84,7 @@ async def extremum_verification(
                     f"{market_type_verbose}: "
                     f"{direction} {distance_per}% "
                     f"{item[0]}, "
-                    f"x{round(item[1] / avg_vol, 1)}"
+                    f"x{round(item[1] / avg_vol, 1)}, ${round((item[1] * item[0]) / 1000, 2)}K"
                 )
 
 
@@ -92,7 +93,8 @@ async def search(coin, update_lock):
         result = {}
         for market_type in ["f", "s"]:
             depth = await order_book(coin, 500, market_type)
-            the_klines = await klines(coin, "1m", 240, market_type)
+            klines_len = int(os.getenv('KLINES_LEN', 240))
+            the_klines = await klines(coin, "1m", klines_len, market_type)
             if len(depth) > 0 and len(the_klines) > 0:
                 c_time, c_open, c_high, c_low, c_close, avg_vol = the_klines[0], the_klines[1], the_klines[2], the_klines[3], the_klines[4], the_klines[5]
                 depth = depth[1]  # [ціна, об'єм]
