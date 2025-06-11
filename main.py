@@ -1,8 +1,10 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv('main.env')
-load_dotenv('params.env')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+load_dotenv(os.path.join(BASE_DIR, "params.env"))
+load_dotenv(os.path.join(BASE_DIR, "main.env"))
 
 from main_log_config import setup_logger
 setup_logger(os.path.dirname(__file__))
