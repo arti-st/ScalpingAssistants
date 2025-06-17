@@ -21,8 +21,9 @@ vol_mpl_depth = float(os.getenv("VOL_MPL_DEPTH", 8.0))
 
 
 async def restarter():
+    refresh_hours = int(os.getenv('UPDATE_TIME_HOURS', '2'))
     while True:
-        if datetime.now().hour % 2 == 0 and datetime.now().minute == 0:
+        if datetime.now().hour % refresh_hours == 0 and datetime.now().minute == 0:
             terminator.set()
             break
         else:
@@ -71,11 +72,12 @@ async def extremum_verification(
             higher_sizes = [depth[k][1] for k in range(depth.index(item) + 1, depth.index(item) + d_room + 1)]
 
             if all(item[1] >= dom * size_mpl for dom in lower_sizes + higher_sizes):
+                size_usdt = round((item[1] * item[0]) / 1000, 2)
                 if current_extremum:
-                    print(f'{coin} {market_type_verbose} found CHART extr! {item[0]}!')
+                    print(f'{datetime.now()} {coin}, {market_type_verbose}, CHART size (${size_usdt}K) on {item[0]}!')
                     direction = '↗️' if item[0] >= bar_close else '↘️'
                 else:
-                    print(f'{coin} {market_type_verbose} found DEPTH extr! {item[0]}!')
+                    print(f'{datetime.now()} {coin}, {market_type_verbose}, DOM size (${size_usdt}K) on {item[0]}!')
                     direction = '⬆️' if item[0] >= bar_close else '⬇️'
 
                 result[distance_per] = (
@@ -84,7 +86,7 @@ async def extremum_verification(
                     f"{market_type_verbose}: "
                     f"{direction} {distance_per}% "
                     f"{item[0]}, "
-                    f"x{round(item[1] / avg_vol, 1)}, ${round((item[1] * item[0]) / 1000, 2)}K"
+                    f"x{round(item[1] / avg_vol, 1)}, ${size_usdt}K"
                 )
 
 
