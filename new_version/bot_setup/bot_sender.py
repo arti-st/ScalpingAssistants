@@ -50,21 +50,17 @@ async def update_message_every_x_seconds(update_lock):
                 all_updates.sort(key=lambda x: x[3]['upd_time'], reverse=True)
 
                 msg_lines = []
-                header = f"{'Time':^6} {'Coin':^8} {'Price':^10} {'Dir'} {'Dyn'} {'Dist':^6} {'Range':^11} {'Size':^6} {'Range':^7}"
-                msg_lines.append(header)
-                msg_lines.append('-' * len(header))
-
                 for coin, price, direction, numbers in all_updates:
                     msg_lines.append(
-                        f"{numbers['upd_time'].strftime('%H:%M'):^6} "
-                        f"{coin[:-4]:^8} "
+                        f"{numbers['upd_time'].strftime('%H:%M'):^5} "
+                        f"{coin[:-4]:^9} "
                         f"{price:^10} "
                         f"{numbers['direction']:^2} "
                         f"{numbers['dynamic']:^2} "
-                        f"{numbers['cur_dist']:^8} "
-                        f"{f'{numbers['min_dist']}-{numbers['max_dist']}':^12} "
-                        f"{numbers['cur_size']:^8} "
-                        f"{f'{numbers['min_size']}-{numbers['max_size']}':^12} "
+                        f"{numbers['cur_dist']:<5}% "
+                        f"{f'({numbers['min_dist']}-{numbers['max_dist']})':<13} "
+                        f"${numbers['cur_size']:<3}K "
+                        f"{f'({numbers['min_size']}-{numbers['max_size']})':<9} "
                     )
 
                 msg = "\n".join(msg_lines)
