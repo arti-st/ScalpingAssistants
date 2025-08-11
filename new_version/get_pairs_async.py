@@ -6,6 +6,10 @@ import asyncio
 
 async def fetch_klines(session, url):
     async with session.get(url) as response:
+        w = int(response.headers.get('x-mbx-used-weight-1m', 1000))
+        if w > 2000:
+            raise ConnectionError('Too close to the limit. 429')
+
         return await response.json() if response.status == 200 else None
 
 

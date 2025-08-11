@@ -13,6 +13,10 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
         async with session.get(url) as response:
             # print(f"Weight used by {symbol} for book: {response.headers.get('x-mbx-used-weight-1m')}")
 
+            w = int(response.headers.get('x-mbx-used-weight-1m', 1000))
+            if w > 2000:
+                raise ConnectionError('Too close to the limit. 429')
+
             if response.status == 200:
                 response_data = await response.json()
 

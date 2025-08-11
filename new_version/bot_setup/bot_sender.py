@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import os
 from datetime import datetime
 from new_version.bot_setup.bot_setup import bot
@@ -10,30 +11,68 @@ async def sender(msg):
     """Send a new message, deleting the old one if it exists."""
     global sent_message_id
     try:
-        # If a previous message exists, delete it first
         if sent_message_id:
             await bot.delete_message(chat_id=os.getenv('CHAT_ID'), message_id=sent_message_id)
 
-        # Send the new message and store the message_id
-        message = await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)
+        import html
+        text = f"<pre>{html.escape(msg)}</pre>"   # preserves spacing + monospace
+
+        message = await bot.send_message(
+            chat_id=os.getenv('CHAT_ID'),
+            text=text,
+            parse_mode='HTML'
+        )
         sent_message_id = message.message_id
-    finally:
-        await bot.session.close()
+
+    except Exception as e:
+        print("send error:", e)
+        # optionally log
+    # DO NOT close bot.session here — close it once on graceful shutdown
 
 
-async def update_message_every_5_seconds(update_lock):
-    """Update the message every 5 seconds with the latest coin_updates."""
-    last_update = None  # Variable to track when the updates have changed
+
+async def update_message_every_x_seconds(update_lock):
+    last_update = None
 
     while not terminator.is_set():
 
-        # Lock the dictionary to ensure safe access to coin_updates
         async with update_lock:
-            if coin_updates != last_update and coin_updates:  # If the updates have changed
-                last_update = coin_updates.copy()  # Store the new updates
+            if coin_updates != last_update and coin_updates:
+                last_update = copy.deepcopy(coin_updates)
 
-                # Prepare the message to display
-                all_updates = "\n".join([u for u in coin_updates.values()])
-                await sender(f"Live Updates at {datetime.now().strftime('%H:%M:%S')}:\n\n{all_updates}")
+                # Flatten all updates into one list
+                all_updates = []
+                for coin, params in coin_updates.items():
+                    for (price, direction), numbers in params.items():
+                        all_updates.append((coin, price, direction, numbers))
 
-        await asyncio.sleep(5)
+                # Sort by numbers['upd_time'] descending
+                all_updates.sort(key=lambda x: x[3]['upd_time'], reverse=True)
+
+                msg_lines = []
+                header = f"{'Time':^6} {'Coin':^8} {'Price':^10} {'Dir'} {'Dyn'} {'Dist':^6} {'Range':^11} {'Size':^6} {'Range':^7}"
+                msg_lines.append(header)
+                msg_lines.append('-' * len(header))
+
+                for coin, price, direction, numbers in all_updates:
+                    msg_lines.append(
+                        f"{numbers['upd_time'].strftime('%H:%M'):^6} "
+                        f"{coin[:-4]:^8} "
+                        f"{price:^10} "
+                        f"{numbers['direction']:^2} "
+                        f"{numbers['dynamic']:^2} "
+                        f"{numbers['cur_dist']:^8} "
+                        f"{f'{numbers['min_dist']}-{numbers['max_dist']}':^12} "
+                        f"{numbers['cur_size']:^8} "
+                        f"{f'{numbers['min_size']}-{numbers['max_size']}':^12} "
+                    )
+
+                msg = "\n".join(msg_lines)
+
+                await sender(f"Live Updates at {datetime.now().strftime('%H:%M:%S')}:\n\n{msg}")
+            elif coin_updates == last_update:
+                print(f'{datetime.now()} no new updates')
+            elif not coin_updates:
+                print(f'{datetime.now()} coin dict is empty')
+
+        await asyncio.sleep(60)
