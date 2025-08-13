@@ -88,6 +88,7 @@ async def extremum_verification(
 
             async with update_lock:
                 if coin not in coin_updates or key not in coin_updates[coin]:
+                    coin_updates[coin] = {key: {}}
                     coin_updates[coin][key] = {
                     'upd_time': time_now,
                     'direction': direction,
