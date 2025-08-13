@@ -1,6 +1,6 @@
 import logging
 import aiohttp
-from new_version.bot_setup.bot_service_sender import send_sevice_message
+from bot_setup.bot_service_sender import send_sevice_message
 
 
 async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple:

@@ -1,6 +1,6 @@
 import logging
 import os
-from new_version.bot_setup.bot_setup import bot
+from bot_setup.bot_setup import bot
 
 
 async def send_sevice_message(msg):

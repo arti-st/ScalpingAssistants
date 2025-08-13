@@ -2,8 +2,8 @@ import asyncio
 import copy
 import os
 from datetime import datetime
-from new_version.bot_setup.bot_setup import bot
-from new_version.search_for_levels import coin_updates, terminator
+from bot_setup.bot_setup import bot
+from search_for_levels import coin_updates, terminator
 
 sent_message_id = None
 
@@ -56,8 +56,8 @@ async def update_message_every_x_seconds(update_lock):
                         f"{coin[:-4]:^9} "
                         f"{price:^10} "
                         f"{numbers['direction']:^2} "
-                        f"{numbers['dynamic']:^2} "
-                        f"{numbers['cur_dist']:<5}% "
+                        f"{numbers['dynamic']:^3} "
+                        f"{numbers['cur_dist']:<4}% "
                         f"{f'({numbers['min_dist']}-{numbers['max_dist']})':<13} "
                         f"${numbers['cur_size']:<3}K "
                         f"{f'({numbers['min_size']}-{numbers['max_size']})':<9} "
@@ -66,6 +66,7 @@ async def update_message_every_x_seconds(update_lock):
                 msg = "\n".join(msg_lines)
 
                 await sender(f"Live Updates at {datetime.now().strftime('%H:%M:%S')}:\n\n{msg}")
+                print(f'{datetime.now()} dict updated. {len(msg_lines)} items')
             elif coin_updates == last_update:
                 print(f'{datetime.now()} no new updates')
             elif not coin_updates:

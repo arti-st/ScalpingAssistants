@@ -3,9 +3,9 @@ import os
 from asyncio import Event
 from datetime import datetime
 
-from new_version.bot_setup.bot_setup import bot
-from new_version.klines import klines
-from new_version.order_book import order_book
+from bot_setup.bot_setup import bot
+from klines import klines
+from order_book import order_book
 
 coin_updates = {}  # Shared updates storage
 terminator = Event()
@@ -40,77 +40,73 @@ async def distance_calculator(current_extremum, bar_close) -> float:
 
 async def extremum_verification(
         coin: str,
-        current_extremum: float or None,
+        extremums: list,
         bar_close: float,
         avg_atr_per: float,
         depth: list,
         avg_vol: float,
         update_lock,
 ):
-    vol_mpl = vol_mpl_chart if current_extremum else vol_mpl_depth
+    time_now = datetime.now()
+    for current_extremum in extremums:
+        vol_mpl = vol_mpl_chart if current_extremum else vol_mpl_depth
 
-    for item in depth:
-        distance_per = await distance_calculator(item[0], bar_close)
-        distances_verified = distance_per <= atr_dis * avg_atr_per and distance_per <= abs_dis
+        for item in depth:
+            item_price = item[0]
+            item_volume = item[1]
 
-        if current_extremum:
-            wiggle_high = current_extremum * (1 + wiggle_room_perc)
-            wiggle_low = current_extremum * (1 - wiggle_room_perc)
-            size_location_verified = wiggle_low <= item[0] <= wiggle_high
-        else:
-            size_location_verified = True
+            distance_per = await distance_calculator(item_price, bar_close)
+            distances_verified = distance_per <= atr_dis * avg_atr_per and distance_per <= abs_dis
 
-        size_withing_nines = d_room - 1 < depth.index(item) < len(depth) - d_room  # щільність знаходиться між 9-ю спочатку, 9-ю з кінця
-        size_volume_verified = item[1] >= avg_vol * vol_mpl
+            if current_extremum:
+                wiggle_high = current_extremum * (1 + wiggle_room_perc)
+                wiggle_low = current_extremum * (1 - wiggle_room_perc)
+                size_location_verified = wiggle_low <= item_price <= wiggle_high
+                direction = '↗️' if item_price >= bar_close else '↘️'
+            else:
+                size_location_verified = True
+                direction = '⬆️' if item_price >= bar_close else '⬇️'
 
-        # щільність знаходиться між 9-ю спочатку, 9-ю з кінця та ціна щільності == лою
-        if all([distances_verified, size_location_verified, size_withing_nines, size_volume_verified]):
+            # щільність знаходиться між 9-ю спочатку, 9-ю з кінця
+            size_withing_nines = d_room - 1 < depth.index(item) < len(depth) - d_room
+            # щільність більше за середній об'єм
+            size_volume_verified = item_volume >= avg_vol * vol_mpl
+
+            if not all([distances_verified, size_location_verified,
+                        size_withing_nines, size_volume_verified]): continue
+
             # сайзи між ціною щільності -10 та ціною щільності
             lower_sizes = [depth[k][1] for k in range(depth.index(item) - d_room, depth.index(item))]
             # сайзи між ціною щільності +10 та ціною щільності
             higher_sizes = [depth[k][1] for k in range(depth.index(item) + 1, depth.index(item) + d_room + 1)]
+            # сайз більше за усі сусідні сайзи вгору та вниз
+            if not all(item_volume >= dom * size_mpl for dom in lower_sizes + higher_sizes): continue
 
-            if all(item[1] >= dom * size_mpl for dom in lower_sizes + higher_sizes):
-                size_usdt = int((item[1] * item[0]) / 1000)
-                gen_dir = 'up' if item[0] >= bar_close else 'dn'
-                if current_extremum:
-                    # print(f'{datetime.now()} {coin}, {market_type_verbose}, CHART size (${size_usdt}K) on {item[0]}!')
-                    direction = '↗️' if item[0] >= bar_close else '↘️'
+            size_usdt = int((item_volume * item_price) / 1000)
+            gen_dir = 'up' if item_price >= bar_close else 'dn'
+            key = (item_price, gen_dir)
+
+            async with update_lock:
+                if coin not in coin_updates or key not in coin_updates[coin]:
+                    coin_updates[coin][key] = {
+                    'upd_time': time_now,
+                    'direction': direction,
+                    'min_dist': distance_per,
+                    'max_dist': distance_per,
+                    'cur_dist': distance_per,
+                    'min_size': size_usdt,
+                    'max_size': size_usdt,
+                    'cur_size': size_usdt
+                    }
                 else:
-                    # print(f'{datetime.now()} {coin}, {market_type_verbose}, DOM size (${size_usdt}K) on {item[0]}!')
-                    direction = '⬆️' if item[0] >= bar_close else '⬇️'
-
-                # Ensure coin exists
-                if coin not in coin_updates:
-                    coin_updates[coin] = {}
-
-                key = (item[0], gen_dir)
-
-                if not current_extremum and key in coin_updates:
-                    continue
-
-                # If record exists — preserve min/max logic
-                if key in coin_updates[coin]:
                     hist = coin_updates[coin][key]
                     current_min_dist = hist['min_dist'] if hist['min_dist'] < distance_per else distance_per
                     current_max_dist = hist['max_dist'] if hist['max_dist'] > distance_per else distance_per
                     current_min_size = hist['min_size'] if hist['min_size'] < size_usdt else size_usdt
                     current_max_size = hist['max_size'] if hist['max_size'] > size_usdt else size_usdt
-                else:
-                    # First time for this (price, direction)
-                    current_min_dist = distance_per
-                    current_max_dist = distance_per
-                    current_min_size = size_usdt
-                    current_max_size = size_usdt
-
-                dynamic = '🔸' if current_min_dist != current_max_dist else '🔹'
-
-                # Update without overwriting other entries
-                async with update_lock:
                     coin_updates[coin][key] = {
-                        'upd_time': datetime.now(),
+                        'upd_time': time_now,
                         'direction': direction,
-                        'dynamic': dynamic,
                         'min_dist': current_min_dist,
                         'max_dist': current_max_dist,
                         'cur_dist': distance_per,
@@ -122,16 +118,39 @@ async def extremum_verification(
     if coin not in coin_updates:
         return
 
+    # depth_values = {item[0]: item[1] for item in depth}
+
     async with update_lock:
-        for key, values in list(coin_updates[coin].items()):
-            price, gen_dir = key
+        for key in list(coin_updates[coin].keys()):
+            price = key[0]
+            gen_dir = key[1]
+            param = coin_updates[coin][key]
 
-            if gen_dir == 'up' and bar_close > price:
-                coin_updates[coin][key]['dynamic'] = '🔻'
+            # actual_vol_rn = depth_values.get(price, 0) * price / 1000
+            # size_active = actual_vol_rn * 0.7 <= param['cur_size'] if actual_vol_rn != 0 else False
 
-            if gen_dir == 'dn' and bar_close < price:
-                coin_updates[coin][key]['dynamic'] = '🔻'
+            distance_per = await distance_calculator(price, bar_close)
+            param['cur_dist'] = distance_per
 
+            size_not_close = abs_dis * 1.00 >= distance_per > abs_dis * 0.66
+            size_mid_close = abs_dis * 0.66 >= distance_per > abs_dis * 0.33
+            size_ver_close = abs_dis * 0.33 >= distance_per > abs_dis * 0.00
+            size_crossed = any([
+                gen_dir == 'up' and bar_close > price,
+                gen_dir == 'dn' and bar_close < price
+            ])
+
+            if param['upd_time'] != time_now:
+                param['dynamic'] = '⬜️'
+            else:
+                if size_not_close:
+                    param['dynamic'] = '🟧'  # orange
+                if size_mid_close:
+                    param['dynamic'] = '🟨'  # yellow
+                if size_ver_close:
+                    param['dynamic'] = '🟩'  # green
+            if size_crossed:
+                param['dynamic'] = '🟥'  # red
 
 async def search(coin, update_lock):
     while not terminator.is_set():
@@ -151,25 +170,18 @@ async def search(coin, update_lock):
         avg_atr_per = [(c_high[-c] - c_low[-c]) / (c_close[-c] / 100) for c in range(30)]
         avg_atr_per = float('{:.2f}'.format(sum(avg_atr_per) / len(avg_atr_per)))
 
+        extremums = [None]
+
         # пошук екстремуму, а потім сайзу на ньому
         for i in range(2, len(c_low) - c_room):
             if c_high[-i] >= max(c_high[-1: -i - c_room: -1]):
-                await extremum_verification(
-                    coin, c_high[-i], c_close[-1],
-                    avg_atr_per, depth, avg_vol, update_lock
-                )
+                extremums.append(c_high[-i])
 
             if c_low[-i] <= min(c_low[-1: -i - c_room: -1]):
-                await extremum_verification(
-                    coin, c_low[-i], c_close[-1],
-                    avg_atr_per, depth, avg_vol, update_lock
-                )
+                extremums.append(c_low[-i])
 
-        # пошук тільки сайзу
-        await extremum_verification(
-            coin, None, c_close[-1],
-            avg_atr_per, depth, avg_vol, update_lock
-        )
+        await extremum_verification(coin, extremums, c_close[-1],
+                                    avg_atr_per, depth, avg_vol, update_lock)
 
         await asyncio.sleep(62)
 
@@ -225,7 +237,6 @@ async def divergences_search(coin):
 
                 if highest_cumdelta and cumdelta_sma_relation:
                     usdt_size = (risk_usdt / upper_distance) * 100
-                    coin_size = usdt_size / c_high[-upper_extremum_index]
 
                     msg = f"\n{coin} SELL-DIV. {upper_extremum_index} cndl / {upper_distance:.2f}% / ${usdt_size:.2f}"
                     await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)
@@ -237,7 +248,6 @@ async def divergences_search(coin):
 
                 if lowest_cumdelta and cumdelta_sma_relation:
                     usdt_size = (risk_usdt / lower_distance) * 100
-                    coin_size = usdt_size / c_high[-lower_extremum_index]
 
                     msg = f"\n{coin} BUY-DIV. {lower_extremum_index} cndl / {lower_distance:.2f}% / ${usdt_size:.2f}"
                     await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)

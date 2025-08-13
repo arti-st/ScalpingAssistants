@@ -9,10 +9,10 @@ load_dotenv(os.path.join(BASE_DIR, "main.env"))
 from main_log_config import setup_logger
 setup_logger(os.path.dirname(__file__))
 
-from new_version.search_for_levels import *
-from new_version.get_pairs_async import get_pairs
-from new_version.bot_setup.bot_service_sender import send_sevice_message
-from new_version.bot_setup.bot_sender import update_message_every_x_seconds
+from search_for_levels import *
+from get_pairs_async import get_pairs
+from bot_setup.bot_service_sender import send_sevice_message
+from bot_setup.bot_sender import update_message_every_x_seconds
 
 
 async def main():

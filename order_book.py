@@ -1,6 +1,6 @@
 import logging
 import aiohttp
-from new_version.bot_setup.bot_service_sender import send_sevice_message
+from bot_setup.bot_service_sender import send_sevice_message
 
 
 async def order_book(symbol, request_limit_length, market_type: str) -> list:
