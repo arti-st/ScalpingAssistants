@@ -82,10 +82,10 @@ async def extremum_verification(
             size_usdt = int((item_volume * item_price) / 1000)
             gen_dir = 'up' if item_price >= bar_close else 'dn'
 
-            print(f'Pattern found on {coin}!')
 
             async with update_lock:
                 key = (coin, item_price, gen_dir)
+                print(f'Pattern found on {coin}! Key: {key}')
 
                 if key not in coin_updates:
                     coin_updates[key] = {
@@ -94,14 +94,14 @@ async def extremum_verification(
                         'min_dist': distance_per,
                         'max_dist': distance_per,
                         'cur_dist': distance_per,
-                        'stable': 'NOO',
+                        'stable': status_colors["empty"],
                         'min_size': size_usdt,
                         'max_size': size_usdt,
                         'cur_size': size_usdt
                     }
                 else:
                     hist = coin_updates[key]
-                    stable = 'YES' if hist['cur_dist'] != distance_per else 'NOO'
+                    stable = status_colors["green"] if hist['cur_dist'] != distance_per else status_colors["empty"]
                     coin_updates[key] = {
                         'upd_time': time_now,
                         'direction': direction,
@@ -114,7 +114,7 @@ async def extremum_verification(
                         'cur_size': size_usdt
                     }
 
-                    if stable == 'YES':
+                    if stable == status_colors["green"]:
                         await bot.send_message(chat_id=os.getenv('CHAT_ID'),
                                                text=f'Size on {coin} has been confirmed! /list\n\n'
                                                     f'{coin_updates[key]}')

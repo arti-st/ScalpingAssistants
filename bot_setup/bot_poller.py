@@ -41,7 +41,7 @@ async def logged_user(message: types.Message):
             f"{coin[:-4]:^8}"
             f"{price:^9}"
             f"{numbers['direction']} {numbers.get('dynamic', 'n/a')} "
-            f"{numbers['cur_dist']:<4}% {f'({numbers['min_dist']}-{numbers['max_dist']})':<11}"
+            f"{numbers['cur_dist']:<4}% {f'({numbers['min_dist']}-{numbers['max_dist']})':<11} "
             f"{numbers['stable']} "
             f"${numbers['cur_size']:<3}K {f'({numbers['min_size']}-{numbers['max_size']})':<9}"
         )
