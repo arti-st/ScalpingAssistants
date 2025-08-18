@@ -6,9 +6,12 @@ import aiohttp
 from bot_setup.bot_setup import bot
 
 
-async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple:
-    futures_klines = f'https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={frame}&limit={request_limit_length}'
-    spot_klines = f'https://api.binance.com/api/v3/klines?symbol={symbol}&interval={frame}&limit={request_limit_length}'
+async def klines(symbol, frame, market_type: str) -> tuple:
+    perfect_klines_len = int(os.getenv('KLINES_LEN', 240))
+    min_klines_len = int(os.getenv('MIN_KLINES_LEN', 60))
+
+    futures_klines = f'https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={frame}&limit={perfect_klines_len}'
+    spot_klines = f'https://api.binance.com/api/v3/klines?symbol={symbol}&interval={frame}&limit={perfect_klines_len}'
 
     url = futures_klines if market_type == "f" else spot_klines
 
@@ -24,7 +27,7 @@ async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple
                 if w > 2000:
                     raise ConnectionError('Too close to the limit. 429')
 
-                if response_length == request_limit_length:
+                if response_length >= min_klines_len:
                     c_time = [float(i[0]) for i in response_data]
                     c_open = [float(i[1]) for i in response_data]
                     c_high = [float(i[2]) for i in response_data]
@@ -61,7 +64,7 @@ async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple
                         return c_time, c_open, c_high, c_low, c_close, avg_vol, buy_volume, sell_volume, cumulative_delta, sma20
 
                 else:
-                    print(f'Not full klines for {symbol}: response_length={response_length}')
+                    print(f'Not full klines for {symbol}: {response_length}/{int(os.getenv('MIN_KLINES_LEN'))}')
                     return ()
 
             elif response.status == 429:
