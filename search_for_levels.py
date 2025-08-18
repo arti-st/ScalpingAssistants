@@ -91,6 +91,7 @@ async def extremum_verification(
                     coin_updates[key] = {
                         'upd_time': time_now,
                         'direction': direction,
+                        'dynamic': status_colors["empty"],
                         'min_dist': distance_per,
                         'max_dist': distance_per,
                         'cur_dist': distance_per,
