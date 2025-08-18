@@ -13,6 +13,43 @@ async def fetch_klines(session, url):
         return await response.json() if response.status == 200 else None
 
 
+async def get_trading_symbols(session, asset):
+    """Отримує список торгових символів з futures та spot ринків для заданого активу"""
+    try:
+        excluded = os.getenv('EXCLUDED')
+        excluded = list(excluded.replace(" ", "").split(','))
+
+        # Отримуємо інформацію з обох ринків паралельно
+        futures_info, spot_info = await asyncio.gather(
+            fetch_klines(session, "https://fapi.binance.com/fapi/v1/exchangeInfo"),
+            fetch_klines(session, "https://api.binance.com/api/v3/exchangeInfo")
+        )
+
+        if not futures_info or not spot_info:
+            return {}
+
+        # Створюємо set активних спот символів для швидкого пошуку
+        spot_symbols = {
+            d['symbol'] for d in spot_info['symbols']
+            if d['quoteAsset'] == asset and d['status'] == 'TRADING'
+        }
+
+        # Фільтруємо ф'ючерси, залишаючи тільки ті, що мають спотовий відповідник
+        trading_symbols = {
+            d['symbol']: d['filters'][0]['tickSize']
+            for d in futures_info['symbols']
+            if (d['quoteAsset'] == asset and
+                d['symbol'] in spot_symbols and
+                d['symbol'] not in excluded)
+        }
+
+        return trading_symbols
+
+    except Exception as e:
+        print(f"⚠️ Error fetching trading symbols: {e}")
+        return {}
+
+
 async def calculate_pairs(session, pairs_dict, shared_results):
     request_limit_length = 99
     frame = '1m'
@@ -38,14 +75,14 @@ async def split_dict(input_dict, num_parts):
     return [{k: input_dict[k] for k in keys[i * avg + min(i, remainder):(i + 1) * avg + min(i + 1, remainder)]} for i in range(num_parts)]
 
 
-async def get_pairs(excluded, asset):
+async def get_pairs(asset):
     ticksize_filter = float(os.getenv("TICKSIZE_FILTER", 0.05))
     atr_filter = float(os.getenv("ATR_FILTER", 0.3))
     pairs_limit = int(os.getenv("PAIRS_LIMIT", 60))
 
     async with aiohttp.ClientSession() as session:
-        exchange_info = await fetch_klines(session, "https://fapi.binance.com/fapi/v1/exchangeInfo")
-        ts_dict = {d['symbol']: d['filters'][0]['tickSize'] for d in exchange_info['symbols'] if d['quoteAsset'] == asset and d['symbol'] not in excluded}
+        # Отримуємо всі торгові символи через уніфіковану функцію
+        ts_dict = await get_trading_symbols(session, asset)
 
         shared_results = []
         await asyncio.gather(*[calculate_pairs(session, chunk, shared_results) for chunk in await split_dict(ts_dict, 10)])
@@ -54,5 +91,5 @@ async def get_pairs(excluded, asset):
         result = [r[0] for r in sorted_res[:pairs_limit]]
 
         pairs_to_message = ''.join(f"{r[0]} - {round(r[2], 2)}%\n" for r in sorted_res[:pairs_limit])
-        coins_verb = f"⚙️ Pairs got: {len(result)}/{len(sorted_res)}/{len(ts_dict)}.\n\n{pairs_to_message}"
+        coins_verb = f"⚙️ Pairs got: {len(result)}/{len(sorted_res)}/{len(ts_dict)} (spot-validated).\n\n{pairs_to_message}"
         return result, coins_verb
