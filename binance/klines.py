@@ -55,16 +55,13 @@ async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple
                     avg_vol = sum(c_volume) / len(c_volume)
 
                     if len(c_open) != len(c_high) or len(c_open) != len(c_low) or len(c_open) != len(c_close) or len(c_open) != len(c_volume):
+                        print(f'Broken klines for {symbol}: len(c_open)={len(c_open)}, len(c_volume)={len(c_volume)}')
                         return ()
                     else:
                         return c_time, c_open, c_high, c_low, c_close, avg_vol, buy_volume, sell_volume, cumulative_delta, sma20
 
                 else:
-                    # msg = (f"⛔️ Not enough ({response_length}/{request_limit_length}) klines data for {symbol} ({market_type}), status code {response.status}\n"
-                    #        f"{url}")
-                    # if market_type == 'f':
-                    # await send_sevice_message(msg)
-                    # logging.warning(msg)
+                    print(f'Not full klines for {symbol}: response_length={response_length}')
                     return ()
 
             elif response.status == 429:
@@ -72,13 +69,8 @@ async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple
                 await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)
                 logging.warning(msg)
                 exit()
-
             else:
-                # msg = (f"⛔️ No klines data for {symbol} ({market_type}), status code {response.status}\n"
-                #        f"{url}")
-                # if market_type == 'f':
-                # await send_sevice_message(msg)
-                # logging.warning(msg)
+                print(f'Something went wrong while we requested klines for {symbol}:\n{response}')
                 return ()
 
 # async def main():

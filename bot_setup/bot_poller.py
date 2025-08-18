@@ -18,15 +18,16 @@ async def logged_user(message: types.Message):
 
     # Flatten all updates into one list
     all_updates = []
-    for coin, params in coin_updates.items():
-        for (price, direction), numbers in params.items():
-            all_updates.append((coin, price, direction, numbers))
+    for key, params in coin_updates.items():
+        coin, price, gen_dir = key
+        all_updates.append((coin, price, params))
 
     # Sort by numbers['upd_time'] descending
-    all_updates.sort(key=lambda x: x[3]['upd_time'], reverse=True)
+    all_updates.sort(key=lambda x: x[2]['upd_time'], reverse=True)
 
     filtered_updates = []
     coin_seen = {}
+
     for i in all_updates:
         coin = i[0]
         if coin_seen.get(coin, 0) < 5:  # strictly less than 5
@@ -34,14 +35,14 @@ async def logged_user(message: types.Message):
             coin_seen[coin] = coin_seen.get(coin, 0) + 1
 
     msg_lines = []
-    for coin, price, direction, numbers in filtered_updates:
+    for coin, price, numbers in filtered_updates:
         msg_lines.append(
             f"{numbers['upd_time'].strftime('%H:%M'):^5}"
             f"{coin[:-4]:^8}"
             f"{price:^9}"
             f"{numbers['direction']} {numbers.get('dynamic', 'n/a')} "
             f"{numbers['cur_dist']:<4}% {f'({numbers['min_dist']}-{numbers['max_dist']})':<11}"
-            f"{numbers['stable']}"
+            f"{numbers['stable']} "
             f"${numbers['cur_size']:<3}K {f'({numbers['min_size']}-{numbers['max_size']})':<9}"
         )
 

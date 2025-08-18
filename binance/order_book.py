@@ -23,7 +23,7 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
             if response.status == 200:
                 response_data = await response.json()
 
-                if len(response_data['bids']) >= request_limit_length * 0.8:
+                if len(response_data['bids']) >= request_limit_length * 0.3:
                     bids = response_data.get('bids')
                     asks = response_data.get('asks')
                     close = float(asks[0][0])
@@ -39,21 +39,13 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
                     max_decimal = max([decimal_1, decimal_2, decimal_3])
 
                     if len(bids) == 0 or len(asks) == 0:
-                        # msg = (f"⛔️ bids=0 or asks=0 for depth data for {symbol} ({market_type}), status code {response.status}\n"
-                        #        f"{url}")
-                        # if market_type == 'f':
-                            # await send_sevice_message(msg)
-                            # logging.warning(msg)
+                        print(f'Missing bids/asks for {symbol}: bids={len(bids)}, asks={len(asks)}')
                         return []
                     else:
                         return [close, combined_list, combined_list_sorted, max_decimal]
 
                 else:
-                    # msg = (f"⛔️ Not enough ({len(response_data['bids'])}/{request_limit_length}) depth data for {symbol} ({market_type}), status code {response.status}\n"
-                    #        f"{url}")
-                    # if market_type == 'f':
-                        # await send_sevice_message(msg)
-                        # logging.warning(msg)
+                    print(f'Not full order book for {symbol}: bids={len(response_data['bids'])}, asks={len(response_data['asks'])}')
                     return []
 
             elif response.status == 429:
@@ -63,11 +55,7 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
                 exit()
 
             else:
-                # msg = (f"⛔️ No depth data for {symbol} ({market_type}), status code {response.status}\n"
-                #        f"{url}")
-                # if market_type == 'f':
-                    # await send_sevice_message(msg)
-                    # logging.warning(msg)
+                print(f'Something went wrong while we requested depth for {symbol}:\n{response}')
                 return []
 
 # async def main():
