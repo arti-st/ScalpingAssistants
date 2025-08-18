@@ -101,7 +101,12 @@ async def extremum_verification(
                     }
                 else:
                     hist = coin_updates[key]
-                    stable = status_colors["green"] if hist['cur_dist'] != distance_per else status_colors["empty"]
+
+                    if hist['stable'] == status_colors["green"]:
+                        stable = status_colors["green"]
+                    else:
+                        stable = status_colors["green"] if hist['cur_dist'] != distance_per else status_colors["empty"]
+
                     coin_updates[key] = {
                         'upd_time': time_now,
                         'direction': direction,
@@ -117,7 +122,7 @@ async def extremum_verification(
                     if stable == status_colors["green"]:
                         await bot.send_message(chat_id=os.getenv('CHAT_ID'),
                                                text=f'Size on {coin} has been confirmed! /list\n\n'
-                                                    f'{coin_updates[key]}')
+                                                    f'{key}')
 
 
     async with update_lock:

@@ -25,17 +25,8 @@ async def logged_user(message: types.Message):
     # Sort by numbers['upd_time'] descending
     all_updates.sort(key=lambda x: x[2]['upd_time'], reverse=True)
 
-    filtered_updates = []
-    coin_seen = {}
-
-    for i in all_updates:
-        coin = i[0]
-        if coin_seen.get(coin, 0) < 5:  # strictly less than 5
-            filtered_updates.append(i)
-            coin_seen[coin] = coin_seen.get(coin, 0) + 1
-
     msg_lines = []
-    for coin, price, numbers in filtered_updates:
+    for coin, price, numbers in all_updates[:15]:
         msg_lines.append(
             f"{numbers['upd_time'].strftime('%H:%M'):^5}"
             f"{coin[:-4]:^8}"
