@@ -1,6 +1,9 @@
 import logging
+import os
+
 import aiohttp
-from bot_setup.bot_service_sender import send_sevice_message
+
+from bot_setup.bot_setup import bot
 
 
 async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple:
@@ -60,13 +63,13 @@ async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple
                     # msg = (f"⛔️ Not enough ({response_length}/{request_limit_length}) klines data for {symbol} ({market_type}), status code {response.status}\n"
                     #        f"{url}")
                     # if market_type == 'f':
-                        # await send_sevice_message(msg)
-                        # logging.warning(msg)
+                    # await send_sevice_message(msg)
+                    # logging.warning(msg)
                     return ()
 
             elif response.status == 429:
                 msg = f"⛔️ {symbol} ({market_type}) LIMITS REACHED !!!! 429 CODE !!!!"
-                await send_sevice_message(msg)
+                await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)
                 logging.warning(msg)
                 exit()
 
@@ -74,10 +77,9 @@ async def klines(symbol, frame, request_limit_length, market_type: str) -> tuple
                 # msg = (f"⛔️ No klines data for {symbol} ({market_type}), status code {response.status}\n"
                 #        f"{url}")
                 # if market_type == 'f':
-                    # await send_sevice_message(msg)
-                    # logging.warning(msg)
+                # await send_sevice_message(msg)
+                # logging.warning(msg)
                 return ()
-
 
 # async def main():
 #     while True:

@@ -54,5 +54,5 @@ async def get_pairs(excluded, asset):
         result = [r[0] for r in sorted_res[:pairs_limit]]
 
         pairs_to_message = ''.join(f"{r[0]} - {round(r[2], 2)}%\n" for r in sorted_res[:pairs_limit])
-        print(f"⚙️ Pairs got: {len(result)}/{len(sorted_res)}/{len(ts_dict)}.\n\n{pairs_to_message}")
-        return result
+        coins_verb = f"⚙️ Pairs got: {len(result)}/{len(sorted_res)}/{len(ts_dict)}.\n\n{pairs_to_message}"
+        return result, coins_verb

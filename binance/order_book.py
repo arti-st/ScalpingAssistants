@@ -1,6 +1,9 @@
 import logging
+import os
+
 import aiohttp
-from bot_setup.bot_service_sender import send_sevice_message
+
+from bot_setup.bot_setup import bot
 
 
 async def order_book(symbol, request_limit_length, market_type: str) -> list:
@@ -55,7 +58,7 @@ async def order_book(symbol, request_limit_length, market_type: str) -> list:
 
             elif response.status == 429:
                 msg = f"⛔️ {symbol} ({market_type}) LIMITS REACHED !!!! 429 CODE !!!!"
-                await send_sevice_message(msg)
+                await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)
                 logging.warning(msg)
                 exit()
 

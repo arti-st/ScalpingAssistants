@@ -1,35 +1,33 @@
 import asyncio
 import os
-from asyncio import Event
 from datetime import datetime
 
 from bot_setup.bot_setup import bot
-from klines import klines
-from order_book import order_book
+from binance.klines import klines
+from binance.order_book import order_book
+from mutual_variables.dictionaries import coin_updates, confirmed_size_found
+from mutual_variables.terminator import terminator
 
-coin_updates = {}  # Shared updates storage
-terminator = Event()
+c_room = int(os.getenv("C_ROOM"))
+d_room = int(os.getenv("D_ROOM"))
 
-c_room = int(os.getenv("C_ROOM", 30))
-d_room = int(os.getenv("D_ROOM", 10))
+wiggle_room_perc = float(os.getenv("WIGGLE_ROOM_PERC"))
+atr_dis = float(os.getenv("ATR_DIS"))
+abs_dis = float(os.getenv("ABS_DIS"))
 
-wiggle_room_perc = float(os.getenv("WIGGLE_ROOM_PERC", 0.005))
-atr_dis = float(os.getenv("ATR_DIS", 4.0))
-abs_dis = float(os.getenv("ABS_DIS", 0.7))
+size_mpl = float(os.getenv("SIZE_MPL"))
+vol_mpl_chart = float(os.getenv("VOL_MPL_CHART"))
+vol_mpl_depth = float(os.getenv("VOL_MPL_DEPTH"))
 
-size_mpl = float(os.getenv("SIZE_MPL", 2.0))
-vol_mpl_chart = float(os.getenv("VOL_MPL_CHART", 3.0))
-vol_mpl_depth = float(os.getenv("VOL_MPL_DEPTH", 8.0))
-
-
-async def restarter():
-    refresh_hours = int(os.getenv('UPDATE_TIME_HOURS', '2'))
-    while True:
-        if datetime.now().hour % refresh_hours == 0 and datetime.now().minute == 0:
-            terminator.set()
-            break
-        else:
-            await asyncio.sleep(60)
+# Десь у глобальному місці
+status_colors = {
+    "orange": "🟧",
+    "yellow": "🟨",
+    "green": "🟩",
+    "red": "🟥",
+    "checked": "☑️",  # emoji version
+    "empty": "▪️"  # black square same width
+}
 
 
 async def distance_calculator(current_extremum, bar_close) -> float:
@@ -87,34 +85,44 @@ async def extremum_verification(
             key = (item_price, gen_dir)
 
             async with update_lock:
-                if coin not in coin_updates or key not in coin_updates[coin]:
-                    coin_updates[coin] = {key: {}}
-                    coin_updates[coin][key] = {
-                    'upd_time': time_now,
-                    'direction': direction,
-                    'min_dist': distance_per,
-                    'max_dist': distance_per,
-                    'cur_dist': distance_per,
-                    'min_size': size_usdt,
-                    'max_size': size_usdt,
-                    'cur_size': size_usdt
-                    }
-                else:
+                if coin not in coin_updates:
+                    coin_updates[coin] = {}
+
+                if key in coin_updates[coin]:
                     hist = coin_updates[coin][key]
                     current_min_dist = hist['min_dist'] if hist['min_dist'] < distance_per else distance_per
                     current_max_dist = hist['max_dist'] if hist['max_dist'] > distance_per else distance_per
                     current_min_size = hist['min_size'] if hist['min_size'] < size_usdt else size_usdt
                     current_max_size = hist['max_size'] if hist['max_size'] > size_usdt else size_usdt
-                    coin_updates[coin][key] = {
-                        'upd_time': time_now,
-                        'direction': direction,
-                        'min_dist': current_min_dist,
-                        'max_dist': current_max_dist,
-                        'cur_dist': distance_per,
-                        'min_size': current_min_size,
-                        'max_size': current_max_size,
-                        'cur_size': size_usdt
-                    }
+
+                    if hist['cur_dist'] != distance_per:
+                        confirmed_size_found['found'] = True
+                        stable = status_colors['checked']
+                        await bot.send_message(
+                            chat_id=os.getenv('CHAT_ID'),
+                            text=f'Size on {coin} has been confirmed!',
+                        )
+                    else:
+                        stable = status_colors['empty']
+
+                else:
+                    current_min_dist = distance_per
+                    current_max_dist = distance_per
+                    stable = status_colors['empty']
+                    current_min_size = size_usdt
+                    current_max_size = size_usdt
+
+                coin_updates[coin][key] = {
+                    'upd_time': time_now,
+                    'direction': direction,
+                    'min_dist': current_min_dist,
+                    'max_dist': current_max_dist,
+                    'cur_dist': distance_per,
+                    'stable': stable,
+                    'min_size': current_min_size,
+                    'max_size': current_max_size,
+                    'cur_size': size_usdt
+                }
 
     if coin not in coin_updates:
         return
@@ -127,11 +135,7 @@ async def extremum_verification(
             gen_dir = key[1]
             param = coin_updates[coin][key]
 
-            # actual_vol_rn = depth_values.get(price, 0) * price / 1000
-            # size_active = actual_vol_rn * 0.7 <= param['cur_size'] if actual_vol_rn != 0 else False
-
             distance_per = await distance_calculator(price, bar_close)
-            param['cur_dist'] = distance_per
 
             size_not_close = abs_dis * 1.00 >= distance_per > abs_dis * 0.66
             size_mid_close = abs_dis * 0.66 >= distance_per > abs_dis * 0.33
@@ -141,50 +145,57 @@ async def extremum_verification(
                 gen_dir == 'dn' and bar_close < price
             ])
 
-            if param['upd_time'] != time_now:
-                param['dynamic'] = '⬜️'
+            if param.get('dynamic', '') != status_colors["red"]:
+                if param['upd_time'] != time_now:
+                    param['dynamic'] = status_colors["empty"]
+                else:
+                    if size_not_close:
+                        param['dynamic'] = status_colors["orange"]
+                    if size_mid_close:
+                        param['dynamic'] = status_colors["yellow"]
+                    if size_ver_close:
+                        param['dynamic'] = status_colors["green"]
+                if size_crossed:
+                    param['cur_dist'] = 0.00
+                    param['dynamic'] = status_colors["red"]
             else:
-                if size_not_close:
-                    param['dynamic'] = '🟧'  # orange
-                if size_mid_close:
-                    param['dynamic'] = '🟨'  # yellow
-                if size_ver_close:
-                    param['dynamic'] = '🟩'  # green
-            if size_crossed:
-                param['dynamic'] = '🟥'  # red
+                param['dynamic'] = status_colors["red"]
+
 
 async def search(coin, update_lock):
     while not terminator.is_set():
-        # result = {}
-        # for market_type in ["f", "s"]:
-        market_type = "s"
-        depth = await order_book(coin, 500, market_type)
-        klines_len = int(os.getenv('KLINES_LEN', 1000))
-        the_klines = await klines(coin, "1m", klines_len, market_type)
+        if datetime.now().second <= 2:
+            # result = {}
+            # for market_type in ["f", "s"]:
+            market_type = "s"
+            depth = await order_book(coin, 500, market_type)
+            klines_len = int(os.getenv('KLINES_LEN', 1000))
+            the_klines = await klines(coin, "1m", klines_len, market_type)
 
-        if len(depth) <= 0 or len(the_klines) <= 0:
-            await asyncio.sleep(62)
-            continue
+            if len(depth) <= 0 or len(the_klines) <= 0:
+                await asyncio.sleep(62)
+                continue
 
-        c_time, c_open, c_high, c_low, c_close, avg_vol, buy_vol, sell_vol, cumulative_delta, cd_sma = the_klines
-        depth = depth[1]  # [ціна, об'єм]
-        avg_atr_per = [(c_high[-c] - c_low[-c]) / (c_close[-c] / 100) for c in range(30)]
-        avg_atr_per = float('{:.2f}'.format(sum(avg_atr_per) / len(avg_atr_per)))
+            c_time, c_open, c_high, c_low, c_close, avg_vol, buy_vol, sell_vol, cumulative_delta, cd_sma = the_klines
+            depth = depth[1]  # [ціна, об'єм]
+            avg_atr_per = [(c_high[-c] - c_low[-c]) / (c_close[-c] / 100) for c in range(30)]
+            avg_atr_per = float('{:.2f}'.format(sum(avg_atr_per) / len(avg_atr_per)))
 
-        extremums = [None]
+            extremums = [None]
 
-        # пошук екстремуму, а потім сайзу на ньому
-        for i in range(2, len(c_low) - c_room):
-            if c_high[-i] >= max(c_high[-1: -i - c_room: -1]):
-                extremums.append(c_high[-i])
+            # пошук екстремуму, а потім сайзу на ньому
+            for i in range(2, len(c_low) - c_room):
+                if c_high[-i] >= max(c_high[-1: -i - c_room: -1]):
+                    extremums.append(c_high[-i])
 
-            if c_low[-i] <= min(c_low[-1: -i - c_room: -1]):
-                extremums.append(c_low[-i])
+                if c_low[-i] <= min(c_low[-1: -i - c_room: -1]):
+                    extremums.append(c_low[-i])
 
-        await extremum_verification(coin, extremums, c_close[-1],
-                                    avg_atr_per, depth, avg_vol, update_lock)
-
-        await asyncio.sleep(62)
+            await extremum_verification(coin, extremums, c_close[-1],
+                                        avg_atr_per, depth, avg_vol, update_lock)
+            await asyncio.sleep(50)
+        else:
+            await asyncio.sleep(1)
 
 
 async def last_extremum(extr_type: str, extr_list: list, close_list: list) -> tuple[int, float]:
