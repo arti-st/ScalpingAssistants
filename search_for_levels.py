@@ -119,7 +119,7 @@ async def extremum_verification(
                         'cur_size': size_usdt
                     }
 
-                    if stable == status_colors["green"]:
+                    if stable == status_colors["green"] and distance_per <= abs_dis * 0.5:
                         await bot.send_message(chat_id=os.getenv('CHAT_ID'),
                                                text=f'Size on {coin} has been confirmed! /list\n\n'
                                                     f'{key}')
