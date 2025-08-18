@@ -57,8 +57,7 @@ async def main():
         ]
 
         # Start trading tasks
-        excluded = ['BTCUSDT', 'ETHUSDT']
-        live_coins, coins_verb = await get_pairs(excluded, 'USDT')
+        live_coins, coins_verb = await get_pairs('USDT')
         starting_parameters['coins'] = coins_verb
         starting_parameters['params'] = (f"Running with following parameters:\n\n"
                                          f"Update time: {int(os.getenv('UPDATE_TIME_HOURS', '2'))} hr\n"

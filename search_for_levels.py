@@ -155,9 +155,8 @@ async def extremum_verification(
 async def search(coin):
     while not terminator.is_set():
         if datetime.now().second <= 2:
-            depth = await order_book(coin, 500, "s")
-            klines_len = int(os.getenv('KLINES_LEN', 1000))
-            the_klines = await klines(coin, "1m", klines_len, "s")
+            depth = await order_book(coin, "s")
+            the_klines = await klines(coin, "1m",  "s")
 
             if len(depth) <= 0 or len(the_klines) <= 0:
                 await asyncio.sleep(62)
@@ -221,9 +220,8 @@ async def last_extremum(extr_type: str, extr_list: list, close_list: list) -> tu
 async def divergences_search(coin):
     while not terminator.is_set():
         market_type = 'f'
-        klines_len = 480
         risk_usdt = 1
-        the_klines = await klines(coin, "5m", klines_len, market_type)
+        the_klines = await klines(coin, "5m", market_type)
         if len(the_klines) > 0 and market_type == 'f':
             c_time, c_open, c_high, c_low, c_close, avg_vol, buy_vol, sell_vol, cumulative_delta, cd_sma = the_klines
 
