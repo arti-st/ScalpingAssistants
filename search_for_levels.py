@@ -5,7 +5,8 @@ from datetime import datetime
 from bot_setup.bot_setup import bot
 from binance.klines import klines
 from binance.order_book import order_book
-from mutual_variables.dictionaries import coin_updates, update_lock
+from colors_values_update import update_manager, distance_calculator
+from mutual_variables.dictionaries import update_lock
 from mutual_variables.terminator import terminator
 
 c_room = int(os.getenv("C_ROOM"))
@@ -19,22 +20,6 @@ size_mpl = float(os.getenv("SIZE_MPL"))
 vol_mpl_chart = float(os.getenv("VOL_MPL_CHART"))
 vol_mpl_depth = float(os.getenv("VOL_MPL_DEPTH"))
 
-# Десь у глобальному місці
-status_colors = {
-    "orange": "🟧",
-    "yellow": "🟨",
-    "green": "🟩",
-    "red": "🟥",
-    "checked": "☑️",  # emoji version
-    "empty": "▪️"  # black square same width
-}
-
-
-async def distance_calculator(current_extremum, bar_close) -> float:
-    distance_per = abs(current_extremum - bar_close) / (max(current_extremum, bar_close) / 100)
-    distance_per = float('{:.2f}'.format(distance_per))
-    return round(distance_per, 2)
-
 
 async def extremum_verification(
         coin: str,
@@ -44,7 +29,7 @@ async def extremum_verification(
         depth: list,
         avg_vol: float,
 ):
-    time_now = datetime.now()
+    new_sizes = []
     for current_extremum in extremums:
         vol_mpl = vol_mpl_chart if current_extremum else vol_mpl_depth
 
@@ -52,17 +37,18 @@ async def extremum_verification(
             item_price = item[0]
             item_volume = item[1]
 
-            distance_per = await distance_calculator(item_price, bar_close)
-            distances_verified = distance_per <= atr_dis * avg_atr_per and distance_per <= abs_dis
-
             if current_extremum:
                 wiggle_high = current_extremum * (1 + wiggle_room_perc)
                 wiggle_low = current_extremum * (1 - wiggle_room_perc)
                 size_location_verified = wiggle_low <= item_price <= wiggle_high
-                direction = '↗️' if item_price >= bar_close else '↘️'
+                # direction = '↗️' if item_price >= bar_close else '↘️'
             else:
                 size_location_verified = True
-                direction = '⬆️' if item_price >= bar_close else '⬇️'
+                # direction = '⬆️' if item_price >= bar_close else '⬇️'
+
+            direction = 'up' if item_price >= bar_close else 'dn'
+            distance_per = await distance_calculator(item_price, bar_close, direction)
+            distances_verified = 0 < distance_per <= atr_dis * avg_atr_per and 0 < distance_per <= abs_dis
 
             # щільність знаходиться між 9-ю спочатку, 9-ю з кінця
             size_withing_nines = d_room - 1 < depth.index(item) < len(depth) - d_room
@@ -79,92 +65,22 @@ async def extremum_verification(
             # сайз більше за усі сусідні сайзи вгору та вниз
             if not all(item_volume >= dom * size_mpl for dom in lower_sizes + higher_sizes): continue
 
-            size_usdt = int((item_volume * item_price) / 1000)
-            gen_dir = 'up' if item_price >= bar_close else 'dn'
+            new_sizes.append({'price': item_price, 'direction': direction})
+            print(f'New signal has been found on {coin}')
 
-
-            async with update_lock:
-                key = (coin, item_price, gen_dir)
-                print(f'Pattern found on {coin}! Key: {key}')
-
-                if key not in coin_updates:
-                    coin_updates[key] = {
-                        'upd_time': time_now,
-                        'direction': direction,
-                        'dynamic': status_colors["empty"],
-                        'min_dist': distance_per,
-                        'max_dist': distance_per,
-                        'cur_dist': distance_per,
-                        'stable': status_colors["empty"],
-                        'min_size': size_usdt,
-                        'max_size': size_usdt,
-                        'cur_size': size_usdt
-                    }
-                else:
-                    hist = coin_updates[key]
-
-                    if hist['stable'] == status_colors["green"]:
-                        stable = status_colors["green"]
-                    else:
-                        stable = status_colors["green"] if hist['cur_dist'] != distance_per else status_colors["empty"]
-
-                    coin_updates[key] = {
-                        'upd_time': time_now,
-                        'direction': direction,
-                        'min_dist': hist['min_dist'] if hist['min_dist'] < distance_per else distance_per,
-                        'max_dist': hist['max_dist'] if hist['max_dist'] > distance_per else distance_per,
-                        'cur_dist': distance_per,
-                        'stable': stable,
-                        'min_size': hist['min_size'] if hist['min_size'] < size_usdt else size_usdt,
-                        'max_size': hist['max_size'] if hist['max_size'] > size_usdt else size_usdt,
-                        'cur_size': size_usdt
-                    }
-
-                    if stable == status_colors["green"] and distance_per <= abs_dis * 0.5:
-                        await bot.send_message(chat_id=os.getenv('CHAT_ID'),
-                                               text=f'Size on {coin} has been confirmed! /list\n\n'
-                                                    f'{key}')
-
-
+    depth_values = {item[0]: item[1] for item in depth}
     async with update_lock:
-        for key, params in coin_updates.items():
-            symbol, price, gen_dir = key
-            if symbol != coin: continue
-
-            distance_per = await distance_calculator(price, bar_close)
-
-            size_not_close = abs_dis * 1.00 >= distance_per > abs_dis * 0.66
-            size_mid_close = abs_dis * 0.66 >= distance_per > abs_dis * 0.33
-            size_ver_close = abs_dis * 0.33 >= distance_per > abs_dis * 0.00
-            size_crossed = any([
-                gen_dir == 'up' and bar_close > price,
-                gen_dir == 'dn' and bar_close < price
-            ])
-
-            if params.get('dynamic', '') != status_colors["red"]:
-                if params['upd_time'] != time_now:
-                    params['dynamic'] = status_colors["empty"]
-                else:
-                    if size_not_close:
-                        params['dynamic'] = status_colors["orange"]
-                    if size_mid_close:
-                        params['dynamic'] = status_colors["yellow"]
-                    if size_ver_close:
-                        params['dynamic'] = status_colors["green"]
-                if size_crossed:
-                    params['cur_dist'] = 0.00
-                    params['dynamic'] = status_colors["red"]
-            else:
-                params['dynamic'] = status_colors["red"]
+        await update_manager(new_sizes, coin, bar_close, depth_values)
 
 
 async def search(coin):
     while not terminator.is_set():
         if datetime.now().second <= 2:
             depth = await order_book(coin, "s")
-            the_klines = await klines(coin, "1m",  "s")
+            the_klines = await klines(coin, "1m", "s")
 
             if len(depth) <= 0 or len(the_klines) <= 0:
+                print(f'Depth of klines are empty!')
                 await asyncio.sleep(62)
                 continue
 

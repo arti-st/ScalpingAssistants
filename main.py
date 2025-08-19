@@ -61,9 +61,9 @@ async def main():
         starting_parameters['coins'] = coins_verb
         starting_parameters['params'] = (f"Running with following parameters:\n\n"
                                          f"Update time: {int(os.getenv('UPDATE_TIME_HOURS', '2'))} hr\n"
-                                         f"Ticksize filter: <{float(os.getenv("TICKSIZE_FILTER", 0.05))}\n"
-                                         f"ATR filter: >{float(os.getenv("ATR_FILTER", 0.3))}\n"
-                                         f"Pairs limit: <{int(os.getenv("PAIRS_LIMIT", 60))}\n\n"
+                                         f"Ticksize filter: {float(os.getenv("TICKSIZE_FILTER", 0.05))}\n"
+                                         f"ATR filter: {float(os.getenv("ATR_FILTER", 0.3))}\n"
+                                         f"Pairs limit: {int(os.getenv("PAIRS_LIMIT", 60))}\n\n"
                                          f"Room to the left: {c_room}\n"
                                          f"Room upper/lower in DOM: {d_room}\n"
                                          f"Wiggle room: {wiggle_room_perc * 100}\n\n"
