@@ -84,6 +84,8 @@ async def update_values(size_price, direction, params, current_price, depth):
         current_size < params['size_max'] * 0.5
     ]):
         params['deprecated'] = True
+        params['distance_color'] = status_colors['empty']
+        params['size_color'] = status_colors['empty']
     else:
         params['deprecated'] = False
 
