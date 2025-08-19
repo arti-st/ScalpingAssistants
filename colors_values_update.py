@@ -11,8 +11,8 @@ async def distance_calculator(size_price, current_price, direction) -> float:
     else:
         distance_per = (current_price - size_price) / (min(size_price, current_price) / 100)
 
-    distance_per = float('{:.2f}'.format(distance_per))
-    return round(distance_per, 2)
+    round_precision = 2 if distance_per >= 0 else 1
+    return round(distance_per, round_precision)
 
 
 status_colors = {

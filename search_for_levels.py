@@ -62,7 +62,6 @@ async def extremum_verification(
             if not all(item_volume >= dom * size_mpl for dom in lower_sizes + higher_sizes): continue
 
             new_sizes.append({'price': item_price, 'direction': direction})
-            print(f'New signal has been found on {coin}')
 
     depth_values = {item[0]: item[1] for item in depth}
     async with update_lock:
