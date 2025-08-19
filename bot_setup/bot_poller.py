@@ -31,11 +31,12 @@ async def logged_user(message: types.Message):
 
     msg_lines = []
     for coin, price, direction, numbers in all_updates[:20]:
+        dir_veb = "🔼" if direction == 'up' else "🔽"
         msg_lines.append(
             f"{numbers['updated'].strftime('%H:%M'):^5}"
             f"{coin[:-4]:^8}"
             f"{price:^9}"
-            f"{direction} {numbers.get('distance_color', 'n/a')} "
+            f"{dir_veb} {numbers.get('distance_color', 'n/a')} "
             f"{numbers['distance_value']:<5}% {f'({numbers['distance_min']}-{numbers['distance_max']})':<11} "
             f"{numbers.get('size_color', 'n/a')} "
             f"${numbers['size_value']:<3}K {f'({numbers['size_min']}-{numbers['size_max']})':<9}"
