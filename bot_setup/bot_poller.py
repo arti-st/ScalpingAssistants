@@ -30,7 +30,7 @@ async def logged_user(message: types.Message):
     all_updates.sort(key=lambda x: x[3]['updated'], reverse=True)
 
     msg_lines = []
-    for coin, price, direction, numbers in all_updates[:10]:
+    for coin, price, direction, numbers in all_updates[:20]:
         msg_lines.append(
             f"{numbers['updated'].strftime('%H:%M'):^5}"
             f"{coin[:-4]:^8}"

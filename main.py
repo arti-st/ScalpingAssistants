@@ -20,11 +20,9 @@ from mutual_variables.dictionaries import starting_parameters
 async def restarter():
     refresh_hours = int(os.getenv('UPDATE_TIME_HOURS', '2'))
     while True:
-        if datetime.now().hour % refresh_hours == 0 and datetime.now().minute == 0:
-            terminator.set()
-            break
-        else:
-            await asyncio.sleep(60)
+        await asyncio.sleep(3600 * refresh_hours)
+        terminator.set()
+        print(f'{datetime.now()} Terminator is SET')
 
 
 async def restart_polling():
@@ -39,23 +37,11 @@ async def restart_polling():
             await asyncio.sleep(5)
 
 
-# async def html_updater():
-#     while True:
-#         if datetime.now().second > 20:
-#             await update_html()
-#             await asyncio.sleep(40)
-#         await asyncio.sleep(1)
-
-
 async def main():
-    while True:
-        # Start the background update task
-        tasks = [
-            asyncio.create_task(restarter()),
-            asyncio.create_task(restart_polling()),
-            # asyncio.create_task(html_updater())
-        ]
+    asyncio.create_task(restarter())
+    asyncio.create_task(restart_polling())
 
+    while True:
         # Start trading tasks
         live_coins, coins_verb = await get_pairs('USDT')
         starting_parameters['coins'] = coins_verb
@@ -67,7 +53,6 @@ async def main():
                                          f"Room to the left: {c_room}\n"
                                          f"Room upper/lower in DOM: {d_room}\n"
                                          f"Wiggle room: {wiggle_room_perc * 100}\n\n"
-                                         f"ATR distance mpl: x{atr_dis}\n"
                                          f"Absolute dis: {abs_dis}\n\n"
                                          f"Size among others: x{size_mpl}\n"
                                          f"Size x Vol mpl (chart): x{vol_mpl_chart}\n"
@@ -75,13 +60,10 @@ async def main():
         print(f'Starting with {len(live_coins)} coins')
         await asyncio.sleep(30)
         print(f'Processing search')
-        for coin in live_coins:
-            tasks.append(asyncio.create_task(search(coin)))
-
-        await asyncio.gather(*tasks)
+        search_tasks = [asyncio.create_task(search(coin)) for coin in live_coins]
+        await asyncio.gather(*search_tasks)
+        print(f'Search loop ended')
         terminator.clear()
-
-        await asyncio.sleep(60)
 
 
 if __name__ == "__main__":
