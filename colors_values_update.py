@@ -76,6 +76,8 @@ async def update_values(size_price, direction, params, current_price, depth):
 
     params['size_value'] = current_size
     params['size_color'] = await size_color_picker(params['size_value'], params['size_max'])
+    params['signal'] = status_colors['empty']
+    params['counter'] = params.get('counter', 0) + 1
 
     # Turn off the deprecated sizes
     if any([
@@ -91,10 +93,11 @@ async def update_values(size_price, direction, params, current_price, depth):
 
     # send message if some updated size is close enough
     if all([
-        params['size_max'] != params['size_min'], # updated
+        params['counter'] >= int(os.getenv('REPEAT_COUNTER')), # updated
         not params['deprecated'], # not deprecated
-        current_distance <= abs_dis * 0.4 # close enough
+        params['distance_value'] <= float(os.getenv('SIGNAL_DIST')) # close enough
     ]):
+        params['signal'] = status_colors['checked']
         return current_distance
     return
 
@@ -118,7 +121,7 @@ async def update_manager(new_sizes: list, coin: str, current_price: float, depth
         print(f'{datetime.now()} Found an existing non-deprecated record for {coin}. Updating process has been started.')
         signal = await update_values(size_price, direction, params, current_price, depth)
         if signal is not None:
-            dir_verb = 'above' if direction == 'up' else 'below'
-            msg = f"Size on {coin} is in {signal}% {dir_verb}. Click /list"
+            dir_verb = '↗️' if direction == 'up' else '↘️'
+            msg = f"{coin} Size on {size_price} in {signal}% {dir_verb}.\n\n/list ... /list ... /list"
             await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)
 

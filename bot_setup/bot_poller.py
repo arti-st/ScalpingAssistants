@@ -9,13 +9,17 @@ from mutual_variables.dictionaries import coin_updates, starting_parameters
 async def logged_user(message: types.Message):
     p = starting_parameters['params']
     msg = 'Params is not ready yet!' if p is None else p
-    await message.answer(msg, parse_mode='HTML')
+    # Remove the html import and pre tags
+    text = f"`\n{msg}\n`"
+    await message.answer(text, parse_mode='MarkdownV2')
 
 @bot_dispatcher.message(Command(commands=("coins")))
 async def logged_user(message: types.Message):
     c = starting_parameters['coins']
     msg = 'Coins is not ready yet!' if c is None else c
-    await message.answer(msg, parse_mode='HTML')
+    # Remove the html import and pre tags
+    text = f"`\n{msg}\n`"
+    await message.answer(text, parse_mode='MarkdownV2')
 
 @bot_dispatcher.message(Command(commands=("list")))
 async def logged_user(message: types.Message):
@@ -34,20 +38,20 @@ async def logged_user(message: types.Message):
         dir_veb = "🔼" if direction == 'up' else "🔽"
         msg_lines.append(
             f"{numbers['updated'].strftime('%H:%M'):^5}"
-            f"{coin[:-4]:^8}"
+            f"{coin[:-4]:^8} "
+            f"{numbers['counter']:<2} {numbers['signal']}"
             f"{price:^9}"
             f"{dir_veb} {numbers.get('distance_color', 'n/a')} "
-            f"{numbers['distance_value']:<5}% {f'({numbers['distance_min']}-{numbers['distance_max']})':<11} "
+            f"{numbers['distance_value']:<5}% {f'{numbers['distance_min']}-{numbers['distance_max']}':<9} "
             f"{numbers.get('size_color', 'n/a')} "
-            f"${numbers['size_value']:<3}K {f'({numbers['size_min']}-{numbers['size_max']})':<9}"
+            f"${numbers['size_value']:<3}K {f'{numbers['size_min']}-{numbers['size_max']}':<7}"
         )
 
     msg = "\n".join(msg_lines) if len(msg_lines) != 0 else 'No recent updates'
 
-    import html
-    text = f"<pre>{html.escape(msg)}</pre>"  # preserves spacing + monospace
-
-    await message.answer(text, parse_mode='HTML')
+    # Remove the html import and pre tags
+    text = f"```\n{msg}\n```"
+    await message.answer(text, parse_mode='MarkdownV2')
 
 
 async def poll():
