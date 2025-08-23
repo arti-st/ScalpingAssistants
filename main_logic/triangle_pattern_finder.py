@@ -8,11 +8,10 @@ load_dotenv(os.path.join(BASE_DIR + '/envs/', "params.env"))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "main.env"))
 
 import asyncio
-from datetime import datetime
 from binance.klines import get_klines
 from charting.triangle_chart import save_triangle_chart
 
-start_search = 3
+start_search = 5
 search_window = 30
 
 
@@ -42,7 +41,7 @@ def hlhl_search(c_high, c_low):
                             # 1st point (High) - має бути найдалі в минулому
                             for first_point_index in range(second_point_index + 1, second_point_index + search_window + 1):
                                 if validate_extremum('max', first_point_index, c_high):
-                                    if c_high[-third_point_index] - c_low[-second_point_index] <= chart_range / 3:
+                                    if c_high[-third_point_index] - c_low[-second_point_index] <= chart_range / 2:
                                         return True, [first_point_index, second_point_index, third_point_index, fourth_point_index]
 
     return False, []
@@ -64,13 +63,13 @@ def lhlh_search(c_high, c_low):
                             # 1st point (Low) - має бути найдалі в минулому
                             for first_point_index in range(second_point_index + 1, second_point_index + search_window + 1):
                                 if validate_extremum('min', first_point_index, c_low):
-                                    if c_high[-second_point_index] - c_low[-third_point_index] <= chart_range / 3:
+                                    if c_high[-second_point_index] - c_low[-third_point_index] <= chart_range / 2:
                                         return True, [first_point_index, second_point_index, third_point_index, fourth_point_index]
 
     return False, []
 
 
-def no_breakouts(e_indexes, flag_type, c_high, c_low) -> tuple[bool, str]:
+def no_breakouts(e_indexes, flag_type, c_high, c_low, atr) -> tuple[bool, str]:
     if not e_indexes:
         return False, ""
     # Лінії
@@ -122,8 +121,8 @@ def no_breakouts(e_indexes, flag_type, c_high, c_low) -> tuple[bool, str]:
                 return False, ""
 
     direction = f"FALLING" if falling_factor > rising_factor else "RISING"
-    relative = abs(falling_factor / rising_factor) if rising_factor != 0 else 10
-    return True, direction + " " + str(round(relative, 2))
+    speed = f" {round((falling_factor / c_high[-1]) * 1000, 2)}/{round((rising_factor / c_low[-1]) * 1000, 2)}"
+    return True, direction + speed
 
 
 async def triangle_found(coin, tf, klines, li=None) -> tuple[bool, str, str]:
@@ -133,8 +132,10 @@ async def triangle_found(coin, tf, klines, li=None) -> tuple[bool, str, str]:
             c_time[:li + 1], c_open[:li + 1], c_high[:li + 1], c_low[:li + 1], c_close[:li + 1],
             avg_vol, buy_vol[:li + 1], sell_vol[:li + 1], cumulative_delta[:li + 1], cd_sma[:li + 1])
 
+    avg_atr = sum([(c_high[-c] - c_low[-c]) / (c_close[-c] / 100) for c in range(1, 61)]) / 60
+
     hlhl_found, hlhl_indexes = hlhl_search(c_high, c_low)
-    no_breaks, direction = no_breakouts(hlhl_indexes, 'hlhl', c_high, c_low)
+    no_breaks, direction = no_breakouts(hlhl_indexes, 'hlhl', c_high, c_low, avg_atr)
     if hlhl_found and no_breaks:
         # msg = (f'{datetime.fromtimestamp(float(c_time[-1]) / 1000)} \n'
         #        f'H-L-H-L triangle found! \n'
@@ -147,7 +148,7 @@ async def triangle_found(coin, tf, klines, li=None) -> tuple[bool, str, str]:
         return True, direction, img_path
 
     lhlh_found, lhlh_indexes = lhlh_search(c_high, c_low)
-    no_breaks, direction = no_breakouts(lhlh_indexes, 'lhlh', c_high, c_low)
+    no_breaks, direction = no_breakouts(lhlh_indexes, 'lhlh', c_high, c_low, avg_atr)
     if lhlh_found and no_breaks:
         # msg = (f'{datetime.fromtimestamp(float(c_time[-1]) / 1000)} \n'
         #        f'L-H-L-H triangle found! \n'
