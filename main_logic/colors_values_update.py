@@ -86,8 +86,8 @@ async def update_values(size_price, direction, params, current_price, depth):
         current_size < params['size_max'] * 0.5
     ]):
         params['deprecated'] = True
-        params['distance_color'] = status_colors['empty']
-        params['size_color'] = status_colors['empty']
+        # params['distance_color'] = status_colors['empty']
+        # params['size_color'] = status_colors['empty']
     else:
         params['deprecated'] = False
 
@@ -118,7 +118,7 @@ async def update_manager(new_sizes: list, coin: str, current_price: float, depth
         if symbol != coin: continue
         if params['deprecated'] is True: continue
 
-        print(f'{datetime.now()} Found an existing non-deprecated record for {coin}. Updating process has been started.')
+        print(f'{datetime.now()} Found an existing non-deprecated record for {coin}. Updating process has been started. Key: {key}')
         signal = await update_values(size_price, direction, params, current_price, depth)
         if signal is not None:
             dir_verb = '↗️' if direction == 'up' else '↘️'

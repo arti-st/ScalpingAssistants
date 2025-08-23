@@ -35,13 +35,22 @@ async def get_trading_symbols(session, asset):
         }
 
         # Фільтруємо ф'ючерси, залишаючи тільки ті, що мають спотовий відповідник
-        trading_symbols = {
-            d['symbol']: d['filters'][0]['tickSize']
-            for d in futures_info['symbols']
-            if (d['quoteAsset'] == asset and
-                d['symbol'] in spot_symbols and
-                d['symbol'] not in excluded)
-        }
+        spot_verified = os.getenv('SPOT_VERIFIED', 'off') == 'on'
+        if spot_verified:
+            trading_symbols = {
+                d['symbol']: d['filters'][0]['tickSize']
+                for d in futures_info['symbols']
+                if (d['quoteAsset'] == asset and
+                    d['symbol'] in spot_symbols and
+                    d['symbol'] not in excluded)
+            }
+        else:
+            trading_symbols = {
+                d['symbol']: d['filters'][0]['tickSize']
+                for d in futures_info['symbols']
+                if (d['quoteAsset'] == asset and
+                    d['symbol'] not in excluded)
+            }
 
         return trading_symbols
 

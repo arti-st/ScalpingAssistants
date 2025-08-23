@@ -1,3 +1,9 @@
+from PIL import PngImagePlugin
+PngImagePlugin.DEBUG = 0
+import matplotlib
+matplotlib.set_loglevel("warning")
+
+
 import os
 import traceback
 from dotenv import load_dotenv
@@ -12,9 +18,9 @@ from main_log_config import setup_logger
 setup_logger(os.path.dirname(__file__))
 
 from bot_setup.bot_poller import poll
-from search_for_levels import *
+from main_logic.flags import *
 from binance.get_pairs_async import *
-from mutual_variables.dictionaries import starting_parameters
+from mutual_variables.dictionaries import coin_updates, starting_parameters
 
 
 async def restarter():
@@ -45,21 +51,22 @@ async def main():
         # Start trading tasks
         live_coins, coins_verb = await get_pairs('USDT')
         starting_parameters['coins'] = coins_verb
-        starting_parameters['params'] = (f"Running with following parameters:\n\n"
-                                         f"Update time: {int(os.getenv('UPDATE_TIME_HOURS', '2'))} hr\n"
-                                         f"Ticksize filter: {float(os.getenv("TICKSIZE_FILTER", 0.05))}\n"
-                                         f"ATR filter: {float(os.getenv("ATR_FILTER", 0.3))}\n"
-                                         f"Pairs limit: {int(os.getenv("PAIRS_LIMIT", 60))}\n\n"
-                                         f"Room upper/lower in DOM: {d_room}\n"
-                                         f"Absolute dis: {abs_dis}\n\n"
-                                         f"Size among others: x{size_mpl}\n"
-                                         f"Size x Vol mpl (DOM): x{vol_mpl_depth}")
+        # starting_parameters['params'] = (f"Running with following parameters:\n\n"
+        #                                  f"Update time: {int(os.getenv('UPDATE_TIME_HOURS', '2'))} hr\n"
+        #                                  f"Ticksize filter: {float(os.getenv("TICKSIZE_FILTER", 0.05))}\n"
+        #                                  f"ATR filter: {float(os.getenv("ATR_FILTER", 0.3))}\n"
+        #                                  f"Pairs limit: {int(os.getenv("PAIRS_LIMIT", 60))}\n\n"
+        #                                  f"Room upper/lower in DOM: {d_room}\n"
+        #                                  f"Absolute dis: {abs_dis}\n\n"
+        #                                  f"Size among others: x{size_mpl}\n"
+        #                                  f"Size x Vol mpl (DOM): x{vol_mpl_depth}")
         print(f'Starting with {len(live_coins)} coins')
         await asyncio.sleep(30)
         print(f'Processing search')
         search_tasks = [asyncio.create_task(search(coin)) for coin in live_coins]
         await asyncio.gather(*search_tasks)
         print(f'Search loop ended')
+        coin_updates.clear()
         terminator.clear()
 
 

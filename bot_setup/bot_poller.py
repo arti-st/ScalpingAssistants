@@ -2,6 +2,7 @@ import asyncio
 from aiogram import types
 from aiogram.filters import Command
 from bot_setup.bot_setup import bot, bot_dispatcher
+from main_logic.colors_values_update import status_colors
 from mutual_variables.dictionaries import coin_updates, starting_parameters
 
 
@@ -34,9 +35,28 @@ async def logged_user(message: types.Message):
     all_updates.sort(key=lambda x: x[3]['updated'], reverse=True)
 
     msg_lines = []
-    for coin, price, direction, numbers in all_updates[:20]:
+    for coin, price, direction, numbers in all_updates:
+        empty_distances = sum(1 for i in all_updates if i[0] == coin and i[3]['distance_color'] == status_colors['empty'])
+        empty_sizes = sum(1 for i in all_updates if i[0] == coin and i[3]['size_color'] == status_colors['empty'])
+        empty_overall = sum(1 for i in all_updates if i[0] == coin and i[3]['deprecated'])
+
+        if not numbers['deprecated']:
+            dir_veb = "🔼" if direction == 'up' else "🔽"
+            msg_lines.append(
+                f"{numbers['updated'].strftime('%H:%M'):^5}"
+                f"{coin[:-4]:^8} "
+                f"{numbers['counter']:<2} {numbers['signal']}"
+                f"{price:^9}"
+                f"{dir_veb} {numbers.get('distance_color', 'n/a')} "
+                f"{numbers['distance_value']:<5}% {f'{numbers['distance_min']}-{numbers['distance_max']}':<9} "
+                f"{numbers.get('size_color', 'n/a')} "
+                f"${numbers['size_value']:<3}K {f'{numbers['size_min']}-{numbers['size_max']}':<7}\n"
+                f"{coin} deprecated: distances={empty_distances}, sizes={empty_sizes}, overall={empty_overall}"
+            )
+
+    for coin, price, direction, numbers in all_updates:
         dir_veb = "🔼" if direction == 'up' else "🔽"
-        msg_lines.append(
+        print(
             f"{numbers['updated'].strftime('%H:%M'):^5}"
             f"{coin[:-4]:^8} "
             f"{numbers['counter']:<2} {numbers['signal']}"
