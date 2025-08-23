@@ -42,7 +42,7 @@ def hlhl_search(c_high, c_low):
                             # 1st point (High) - має бути найдалі в минулому
                             for first_point_index in range(second_point_index + 1, second_point_index + search_window + 1):
                                 if validate_extremum('max', first_point_index, c_high):
-                                    if c_high[-third_point_index] - c_low[-second_point_index] <= chart_range / 2:
+                                    if c_high[-third_point_index] - c_low[-second_point_index] <= chart_range / 3:
                                         return True, [first_point_index, second_point_index, third_point_index, fourth_point_index]
 
     return False, []
@@ -64,7 +64,7 @@ def lhlh_search(c_high, c_low):
                             # 1st point (Low) - має бути найдалі в минулому
                             for first_point_index in range(second_point_index + 1, second_point_index + search_window + 1):
                                 if validate_extremum('min', first_point_index, c_low):
-                                    if c_high[-second_point_index] - c_low[-third_point_index] <= chart_range / 2:
+                                    if c_high[-second_point_index] - c_low[-third_point_index] <= chart_range / 3:
                                         return True, [first_point_index, second_point_index, third_point_index, fourth_point_index]
 
     return False, []
@@ -136,28 +136,28 @@ async def triangle_found(coin, tf, klines, li=None) -> tuple[bool, str, str]:
     hlhl_found, hlhl_indexes = hlhl_search(c_high, c_low)
     no_breaks, direction = no_breakouts(hlhl_indexes, 'hlhl', c_high, c_low)
     if hlhl_found and no_breaks:
-        msg = (f'{datetime.fromtimestamp(float(c_time[-1]) / 1000)} \n'
-               f'H-L-H-L triangle found! \n'
-               f'First high: {c_high[-hlhl_indexes[0]]}\n'
-               f'Second low: {c_low[-hlhl_indexes[1]]}\n'
-               f'Third high: {c_high[-hlhl_indexes[2]]}\n'
-               f'Fourth low: {c_low[-hlhl_indexes[3]]}\n'
-               f'{hlhl_indexes}')
+        # msg = (f'{datetime.fromtimestamp(float(c_time[-1]) / 1000)} \n'
+        #        f'H-L-H-L triangle found! \n'
+        #        f'First high: {c_high[-hlhl_indexes[0]]}\n'
+        #        f'Second low: {c_low[-hlhl_indexes[1]]}\n'
+        #        f'Third high: {c_high[-hlhl_indexes[2]]}\n'
+        #        f'Fourth low: {c_low[-hlhl_indexes[3]]}\n'
+        #        f'{hlhl_indexes}')
         img_path = save_triangle_chart(coin, c_time, c_open, c_high, c_low, c_close, hlhl_indexes, "hlhl", tf.upper(), direction)
-        return True, msg, img_path
+        return True, direction, img_path
 
     lhlh_found, lhlh_indexes = lhlh_search(c_high, c_low)
     no_breaks, direction = no_breakouts(lhlh_indexes, 'lhlh', c_high, c_low)
     if lhlh_found and no_breaks:
-        msg = (f'{datetime.fromtimestamp(float(c_time[-1]) / 1000)} \n'
-               f'L-H-L-H triangle found! \n'
-               f'First low: {c_low[-lhlh_indexes[0]]}\n'
-               f'Second high: {c_high[-lhlh_indexes[1]]}\n'
-               f'Third low: {c_low[-lhlh_indexes[2]]}\n'
-               f'Fourth high: {c_high[-lhlh_indexes[3]]}\n'
-               f'{lhlh_indexes}')
+        # msg = (f'{datetime.fromtimestamp(float(c_time[-1]) / 1000)} \n'
+        #        f'L-H-L-H triangle found! \n'
+        #        f'First low: {c_low[-lhlh_indexes[0]]}\n'
+        #        f'Second high: {c_high[-lhlh_indexes[1]]}\n'
+        #        f'Third low: {c_low[-lhlh_indexes[2]]}\n'
+        #        f'Fourth high: {c_high[-lhlh_indexes[3]]}\n'
+        #        f'{lhlh_indexes}')
         img_path = save_triangle_chart(coin, c_time, c_open, c_high, c_low, c_close, lhlh_indexes, "lhlh", tf.upper(), direction)
-        return True, msg, img_path
+        return True, direction, img_path
 
     return False, 'Not found', ''
 

@@ -58,13 +58,13 @@ async def get_klines(symbol, frame, market_type: str) -> tuple:
                     avg_vol = sum(c_volume) / len(c_volume)
 
                     if len(c_open) != len(c_high) or len(c_open) != len(c_low) or len(c_open) != len(c_close) or len(c_open) != len(c_volume):
-                        print(f'Broken klines for {symbol}: len(c_open)={len(c_open)}, len(c_volume)={len(c_volume)}\r{url}')
+                        print(f'Broken klines for {symbol}: len(c_open)={len(c_open)}, len(c_volume)={len(c_volume)}\n{url}')
                         return ()
                     else:
                         return c_time, c_open, c_high, c_low, c_close, avg_vol, buy_volume, sell_volume, cumulative_delta, sma20
 
                 else:
-                    print(f'Not full klines for {symbol}: {response_length}/{int(os.getenv('MIN_KLINES_LEN'))}\r{url}')
+                    print(f'Not full klines for {symbol}: {response_length}/{int(os.getenv('MIN_KLINES_LEN'))}\n{url}')
                     return ()
 
             elif response.status == 429:
@@ -73,7 +73,7 @@ async def get_klines(symbol, frame, market_type: str) -> tuple:
                 logging.warning(msg)
                 exit()
             else:
-                print(f'Something went wrong while we requested klines for {symbol}:\n{response}\r{url}')
+                print(f'Something went wrong while we requested klines for {symbol}:\n{response}\n{url}')
                 return ()
 
 # async def main():

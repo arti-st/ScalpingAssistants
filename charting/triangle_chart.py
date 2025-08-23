@@ -1,6 +1,7 @@
 from datetime import datetime
 import pandas as pd
 import mplfinance as mpf
+import matplotlib.pyplot as plt  # Add this import
 import os
 
 
@@ -178,5 +179,5 @@ def save_triangle_chart(coin, c_time, c_open, c_high, c_low, c_close, indexes, f
 
     # зберігаємо файл
     fig.savefig(out_path, dpi=300, bbox_inches='tight')
-    fig.close()
+    plt.close(fig)
     return out_path

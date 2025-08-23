@@ -10,8 +10,16 @@ from main_logic.triangle_pattern_finder import triangle_found
 
 async def search(coin):
     while not terminator.is_set():
-        if datetime.now().second <= 2:
+        time_now = datetime.now()
+        if time_now.second <= 2:
             for tf in ['1m', '5m', '15m', '30m', '1h']:
+                if any([
+                    tf == '5m' and time_now.minute % 5 != 0,
+                    tf == '15m' and time_now.minute % 15 != 0,
+                    tf == '30m' and time_now.minute % 30 != 0,
+                    tf == '1h' and time_now.minute != 0,
+                ]): continue
+
                 the_klines = await get_klines(coin, tf, "f")
 
                 if not the_klines or len(the_klines[0]) <= 150:
@@ -21,8 +29,9 @@ async def search(coin):
                 res = await triangle_found(coin=coin, tf=tf, klines=the_klines)
                 if res[0]:
                     img_path = res[2]
+                    direction = res[1]
                     photo = FSInputFile(path=img_path)
-                    await bot.send_photo(chat_id=os.getenv('CHAT_ID'), photo=photo, caption=coin)
+                    await bot.send_photo(chat_id=os.getenv('CHAT_ID'), photo=photo, caption=f'{coin} {tf.upper()} {direction}')
 
             await asyncio.sleep(50)
         else:
