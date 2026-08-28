@@ -5,7 +5,7 @@ from bot_setup.bot_setup import bot
 from mutual_variables.dictionaries import coin_updates
 
 
-async def distance_calculator(size_price, current_price, direction) -> float:
+async def distance_calculator(size_price: float, current_price: float, direction) -> float:
     if direction == 'up':
         distance_per = (size_price - current_price) / (max(size_price, current_price) / 100)
     else:
@@ -50,7 +50,7 @@ async def distance_color_picker(distance, abs_dis) -> str:
 async def update_values(size_price, direction, params, current_price, depth):
     if params.get('deprecated', False): return
 
-    abs_dis = float(os.getenv("ABS_DIS"))
+    abs_dis = float(os.getenv("ABS_DIS", 0.9))
     params['updated'] = datetime.now()
 
     # Distance parameters
@@ -93,9 +93,9 @@ async def update_values(size_price, direction, params, current_price, depth):
 
     # send message if some updated size is close enough
     if all([
-        params['counter'] >= int(os.getenv('REPEAT_COUNTER')), # updated
+        params['counter'] >= int(os.getenv('REPEAT_COUNTER', 2)), # updated
         not params['deprecated'], # not deprecated
-        params['distance_value'] <= float(os.getenv('SIGNAL_DIST')) # close enough
+        params['distance_value'] <= float(os.getenv('SIGNAL_DIST', 0.4)) # close enough
     ]):
         params['signal'] = status_colors['checked']
         return current_distance

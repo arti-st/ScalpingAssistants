@@ -4,6 +4,7 @@ import os
 import aiohttp
 
 from bot_setup.bot_setup import bot
+from mutual_variables.dictionaries import coins_to_ignore
 
 
 async def order_book(symbol, market_type: str) -> list:
@@ -49,6 +50,8 @@ async def order_book(symbol, market_type: str) -> list:
 
                 else:
                     print(f'Not full order book for {symbol}: bids={len(response_data['bids'])}, asks={len(response_data['asks'])}')
+                    coins_to_ignore.add(symbol)
+                    print(f'Added {symbol} to ignore list')
                     return []
 
             elif response.status == 429:
@@ -57,8 +60,13 @@ async def order_book(symbol, market_type: str) -> list:
                 logging.warning(msg)
                 exit()
 
+
             else:
-                print(f'Something went wrong while we requested depth for {symbol}:\n{response}')
+                response_data = await response.json()
+                print(
+                    f'Something went wrong while we requested depth for {symbol} '
+                    f'({market_type}): status={response.status}, response={response_data}'
+                )
                 return []
 
 # async def main():

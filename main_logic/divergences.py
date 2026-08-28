@@ -3,76 +3,84 @@ import os
 from datetime import datetime
 
 from binance.klines import get_klines
-from bot_setup.bot_setup import bot
+from bot_setup.bot_sender import sender
 from mutual_variables.terminator import terminator
 
-
-async def last_extremum(extr_type: str, extr_list: list, close_list: list) -> tuple[int, float]:
-    # div_dist = float(os.getenv('divergence_distance'))
-
-    div_dist = 0.5
-    min_window = 15
-    max_window = 120
-    room_to_the_left = 10
-
-    if extr_type == 'high':
-        for i in range(min_window, max_window):
-            relative_extremum = max(extr_list[-i: -i - room_to_the_left - 1: -1]) <= extr_list[-i]
-
-            if relative_extremum:
-
-                dist = abs(extr_list[-i] - close_list[-1]) / (max(extr_list[-i], close_list[-1]) / 100)
-                rising = close_list[-1] > close_list[-2] > close_list[-3]
-                if extr_list[-i] > close_list[-1] and rising and dist >= div_dist:
-                    return i, dist
-
-    else:
-        for i in range(min_window, max_window):
-            relative_extremum = min(extr_list[-i: -i - room_to_the_left - 1: -1]) >= extr_list[-i]
-
-            if relative_extremum:
-
-                dist = abs(extr_list[-i] - close_list[-1]) / (min(extr_list[-i], close_list[-1]) / 100)
-                falling = close_list[-1] < close_list[-2] < close_list[-3]
-                if extr_list[-i] < close_list[-1] and falling and dist >= div_dist:
-                    return i, dist
-    return 0, 0.0
+TF = int(os.getenv("TF"))
+EXTREMUM_WINDOW = int(os.getenv("EXTREMUM_WINDOW"))
+EXTREMUM_ROOM_LEFT = int(os.getenv("EXTREMUM_ROOM_LEFT"))
+PRICE_RANGE_WINDOW = int(os.getenv("PRICE_RANGE_WINDOW"))
+PRICE_RANGE_PART = int(os.getenv("PRICE_RANGE_PART"))
+DELTA_WINDOW = int(os.getenv("DELTA_WINDOW"))
 
 
 async def divergences_search(coin):
     while not terminator.is_set():
-        market_type = 'f'
-        risk_usdt = 1
-        the_klines = await get_klines(coin, "5m", market_type)
-        if len(the_klines) > 0 and market_type == 'f':
-            c_time, c_open, c_high, c_low, c_close, avg_vol, buy_vol, sell_vol, cumulative_delta, cd_sma = the_klines
+        if datetime.now().minute % TF == 0:
+            the_klines = await get_klines(coin, f"{TF}m", "s")
 
-            upper_extremum_index, upper_distance = await last_extremum('high', c_high, c_close)
-            lower_extremum_index, lower_distance = await last_extremum('low', c_low, c_close)
+            if len(the_klines) <= 0:
+                terminator.set()
+                continue
 
-            if upper_extremum_index != 0:
-                highest_cumdelta = max(cumulative_delta[-1: -4: -1]) == max(cumulative_delta[-1: -upper_extremum_index - 1: -1])
-                cumdelta_sma_relation = all(cd >= sma for cd, sma in zip(cumulative_delta[-1:-10:-1], cd_sma[-1:-10:-1]))
+            (c_time, c_open, c_high, c_low, c_close, avg_vol, buy_vol, sell_vol, cumulative_delta, cd_sma) = the_klines
+            range_high = max(c_high[-PRICE_RANGE_WINDOW:])
+            range_low = min(c_low[-PRICE_RANGE_WINDOW:])
+            price_range = range_high - range_low
+            range_part = price_range / PRICE_RANGE_PART
 
-                if highest_cumdelta and cumdelta_sma_relation:
-                    usdt_size = (risk_usdt / upper_distance) * 100
+            # LONG SETUP
+            upper_extremum_index, upper_extremum_price = None, None
 
-                    msg = f"\n{coin} SELL-DIV. {upper_extremum_index} cndl / {upper_distance:.2f}% / ${usdt_size:.2f}"
-                    await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)
-                    print(msg)
+            for i in range(3, EXTREMUM_WINDOW):
 
-            if lower_extremum_index != 0:
-                lowest_cumdelta = min(cumulative_delta[-1: -4: -1]) == min(cumulative_delta[-1: -lower_extremum_index - 1: -1])
-                cumdelta_sma_relation = all(cd <= sma for cd, sma in zip(cumulative_delta[-1:-10:-1], cd_sma[-1:-10:-1]))
+                if c_high[-i] >= max(c_high[-i - EXTREMUM_ROOM_LEFT:]):
+                    upper_extremum_index = i
+                    upper_extremum_price = c_high[-i]
+                    break
 
-                if lowest_cumdelta and cumdelta_sma_relation:
-                    usdt_size = (risk_usdt / lower_distance) * 100
+            if upper_extremum_index:
 
-                    msg = f"\n{coin} BUY-DIV. {lower_extremum_index} cndl / {lower_distance:.2f}% / ${usdt_size:.2f}"
-                    await bot.send_message(chat_id=os.getenv('CHAT_ID'), text=msg)
-                    print(msg)
+                current_price = c_close[-1]
+                price_in_upper_range = current_price >= range_high - range_part
 
-        while True:
-            await asyncio.sleep(0.5)
-            if datetime.now().minute % 5 == 0 and datetime.now().second == 15:
-                break
+                # Поточна cumulative delta зробила перелой останнього DELTA_WINDOW
+                delta_broke_low = (cumulative_delta[-1] <= min(cumulative_delta[-DELTA_WINDOW:-1]))
+
+                if price_in_upper_range and delta_broke_low:
+                    await sender(f"BUY divergence on {coin} spot. Extremum - {upper_extremum_price}")
+                else:
+                    print(f"No confirmed upper extremum found for {coin}")
+
+            else:
+                print(f"No upper extremum found for {coin}")
+
+            # SHORT SETUP
+            lower_extremum_index, lower_extremum_price = None, None
+
+            for i in range(3, EXTREMUM_WINDOW):
+
+                if c_low[-i] <= min(c_low[-i - EXTREMUM_ROOM_LEFT:]):
+                    lower_extremum_index = i
+                    lower_extremum_price = c_low[-i]
+                    break
+
+            if lower_extremum_index:
+
+                current_price = c_close[-1]
+                price_in_lower_range = current_price <= range_low + range_part
+
+                # Поточна cumulative delta зробила перехай останнього DELTA_WINDOW
+                delta_broke_high = (cumulative_delta[-1] >= max(cumulative_delta[-DELTA_WINDOW:-1]))
+
+                if price_in_lower_range and delta_broke_high:
+                    await sender(f"SELL divergence on {coin} spot. Extremum - {lower_extremum_price}")
+                else:
+                    print(f"No confirmed lower extremum found for {coin}")
+
+            else:
+                print(f"No lower extremum found for {coin}")
+
+            await asyncio.sleep(int(TF * 60 * 0.9))
+
+    return

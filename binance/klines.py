@@ -4,6 +4,7 @@ import os
 import aiohttp
 
 from bot_setup.bot_setup import bot
+from mutual_variables.dictionaries import coins_to_ignore
 
 
 async def get_klines(symbol, frame, market_type: str) -> tuple:
@@ -64,7 +65,8 @@ async def get_klines(symbol, frame, market_type: str) -> tuple:
                         return c_time, c_open, c_high, c_low, c_close, avg_vol, buy_volume, sell_volume, cumulative_delta, sma20
 
                 else:
-                    print(f'Not full klines for {symbol}: {response_length}/{int(os.getenv('MIN_KLINES_LEN'))}\n{url}')
+                    print(f'Not full klines for {symbol}: {response_length}/{int(os.getenv('MIN_KLINES_LEN', 150))}\n{url}')
+                    coins_to_ignore.add(symbol)
                     return ()
 
             elif response.status == 429:

@@ -1,3 +1,4 @@
 # Environment Variables
 envs/main.env
 .log
+/envs/keys.env

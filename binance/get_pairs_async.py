@@ -1,23 +1,23 @@
 import os
-
 import aiohttp
 import asyncio
 
 
-async def fetch_klines(session, url):
+async def fetch_klines(session, url) -> dict:
     async with session.get(url) as response:
         w = int(response.headers.get('x-mbx-used-weight-1m', 1000))
         if w > 2000:
             raise ConnectionError('Too close to the limit. 429')
 
-        return await response.json() if response.status == 200 else None
+        return await response.json() if response.status == 200 else {}
 
 
-async def get_trading_symbols(session, asset):
+async def get_trading_symbols(session, asset, ignored_symbols: list):
     """Отримує список торгових символів з futures та spot ринків для заданого активу"""
     try:
         excluded = os.getenv('EXCLUDED')
         excluded = list(excluded.replace(" ", "").split(','))
+        excluded += ignored_symbols
 
         # Отримуємо інформацію з обох ринків паралельно
         futures_info, spot_info = await asyncio.gather(
@@ -41,6 +41,7 @@ async def get_trading_symbols(session, asset):
                 d['symbol']: d['filters'][0]['tickSize']
                 for d in futures_info['symbols']
                 if (d['quoteAsset'] == asset and
+                    d['status'] == 'TRADING' and
                     d['symbol'] in spot_symbols and
                     d['symbol'] not in excluded)
             }
@@ -49,6 +50,7 @@ async def get_trading_symbols(session, asset):
                 d['symbol']: d['filters'][0]['tickSize']
                 for d in futures_info['symbols']
                 if (d['quoteAsset'] == asset and
+                    d['status'] == 'TRADING' and
                     d['symbol'] not in excluded)
             }
 
@@ -61,7 +63,7 @@ async def get_trading_symbols(session, asset):
 
 async def calculate_pairs(session, pairs_dict, shared_results):
     request_limit_length = 99
-    frame = '1m'
+    frame = f"{os.getenv("TF")}m"
     for symbol, ts in pairs_dict.items():
         url = f'https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={frame}&limit={request_limit_length}'
         try:
@@ -84,14 +86,14 @@ async def split_dict(input_dict, num_parts):
     return [{k: input_dict[k] for k in keys[i * avg + min(i, remainder):(i + 1) * avg + min(i + 1, remainder)]} for i in range(num_parts)]
 
 
-async def get_pairs(asset):
+async def get_pairs(asset, ignored_symbols: list):
     ticksize_filter = float(os.getenv("TICKSIZE_FILTER", 0.05))
     atr_filter = float(os.getenv("ATR_FILTER", 0.3))
     pairs_limit = int(os.getenv("PAIRS_LIMIT", 60))
 
     async with aiohttp.ClientSession() as session:
         # Отримуємо всі торгові символи через уніфіковану функцію
-        ts_dict = await get_trading_symbols(session, asset)
+        ts_dict = await get_trading_symbols(session, asset, ignored_symbols)
 
         shared_results = []
         await asyncio.gather(*[calculate_pairs(session, chunk, shared_results) for chunk in await split_dict(ts_dict, 10)])

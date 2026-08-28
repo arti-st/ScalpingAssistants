@@ -144,10 +144,18 @@ def save_triangle_chart(coin, c_time, c_open, c_high, c_low, c_close, indexes, f
     out_path = os.path.join("triangles", fname)
     os.makedirs("triangles", exist_ok=True)
 
+    chart_style = mpf.make_mpf_style(
+        base_mpf_style='charles',
+        rc={
+            'font.family': 'Microsoft YaHei',
+            'font.weight': 'normal',
+        }
+    )
+
     fig, axlist = mpf.plot(
         df,
         type='candle',
-        style='charles',
+        style=chart_style,
         title='',
         ylabel='',
         addplot=addplot,

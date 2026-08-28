@@ -1,30 +1,29 @@
-from PIL import PngImagePlugin
-PngImagePlugin.DEBUG = 0
-import matplotlib
-matplotlib.set_loglevel("warning")
-
-
 import os
-import traceback
 from dotenv import load_dotenv
-
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "params.env"))
-load_dotenv(os.path.join(BASE_DIR + '/envs/', "main.env"))
+load_dotenv(os.path.join(BASE_DIR + '/envs/', "keys.env"))
 
+from main_logic.divergences import divergences_search
+from PIL import PngImagePlugin
+
+PngImagePlugin.DEBUG = 0
+
+import matplotlib
+import traceback
 from main_log_config import setup_logger
-
-setup_logger(os.path.dirname(__file__))
-
 from bot_setup.bot_poller import poll
-from main_logic.flags import *
+from main_logic.sizes import *
 from binance.get_pairs_async import *
-from mutual_variables.dictionaries import coin_updates, starting_parameters
+from mutual_variables.dictionaries import coin_updates, starting_parameters, coins_to_ignore
+
+matplotlib.set_loglevel("WARNING")
+setup_logger(os.path.dirname(__file__))
 
 
 async def restarter():
-    refresh_hours = int(os.getenv('UPDATE_TIME_HOURS', '2'))
+    refresh_hours = float(os.getenv('UPDATE_TIME_HOURS', '1.0'))
     while True:
         await asyncio.sleep(3600 * refresh_hours)
         terminator.set()
@@ -46,29 +45,52 @@ async def restart_polling():
 async def main():
     asyncio.create_task(restarter())
     asyncio.create_task(restart_polling())
+    last_restart_hour = 0
 
     while True:
+        # Clear ignoring set of coins
+        if last_restart_hour != datetime.now().hour:
+            coins_to_ignore.clear()
+            last_restart_hour = datetime.now().hour
+
         # Start trading tasks
-        live_coins, coins_verb = await get_pairs('USDT')
+        print(f"Coins to ignore: {coins_to_ignore}")
+        live_coins, coins_verb = await get_pairs('USDT', list(coins_to_ignore))
         starting_parameters['coins'] = coins_verb
-        # starting_parameters['params'] = (f"Running with following parameters:\n\n"
-        #                                  f"Update time: {int(os.getenv('UPDATE_TIME_HOURS', '2'))} hr\n"
-        #                                  f"Ticksize filter: {float(os.getenv("TICKSIZE_FILTER", 0.05))}\n"
-        #                                  f"ATR filter: {float(os.getenv("ATR_FILTER", 0.3))}\n"
-        #                                  f"Pairs limit: {int(os.getenv("PAIRS_LIMIT", 60))}\n\n"
-        #                                  f"Room upper/lower in DOM: {d_room}\n"
-        #                                  f"Absolute dis: {abs_dis}\n\n"
-        #                                  f"Size among others: x{size_mpl}\n"
-        #                                  f"Size x Vol mpl (DOM): x{vol_mpl_depth}")
+        starting_parameters['upd_time'] = datetime.now().replace(microsecond=0)
+        starting_parameters['params'] = (f"Running with following parameters:\n\n"
+
+                                         f"Update time: {os.getenv('UPDATE_TIME_HOURS')} hr\n"
+                                         f"Ticksize filter: {os.getenv("TICKSIZE_FILTER")}\n"
+                                         f"ATR filter: {os.getenv("ATR_FILTER")}\n"
+                                         f"Pairs limit: {os.getenv("PAIRS_LIMIT")}\n"
+                                         f"Spot verified: {os.getenv("SPOT_VERIFIED")}\n\n"
+
+                                         f"Depth length: {os.getenv("DEPTH_LEN")}\n"
+                                         f"Depth (min) length: {os.getenv("MIN_DEPTH_LEN")}\n"
+                                         f"Klines length: {os.getenv("KLINES_LEN")}\n"
+                                         f"Klines (min) length: {os.getenv("MIN_KLINES_LEN")}\n"
+                                         f"Room to the left: {os.getenv("C_ROOM")}\n"
+                                         f"Room upper/lower in DOM: {os.getenv("D_ROOM")}\n"
+                                         f"Wiggle room: {os.getenv("WIGGLE_ROOM_PERC")}%\n"
+                                         f"Absolute dis: {os.getenv("ABS_DIS")}\n\n"
+                                         f"Size among others: x{os.getenv("SIZE_MPL")}\n"
+                                         f"Size x Vol mpl (DOM): x{os.getenv("VOL_MPL_DEPTH")}\n"
+                                         f"Times to repeat: {os.getenv("REPEAT_COUNTER")}\n"
+                                         f"Distance to signal: {os.getenv("SIGNAL_DIST")}%")
+
         print(f'Starting with {len(live_coins)} coins')
         await asyncio.sleep(30)
         print(f'Processing search')
-        search_tasks = [asyncio.create_task(search(coin)) for coin in live_coins]
+        search_tasks = [asyncio.create_task(divergences_search(coin)) for coin in live_coins]
         await asyncio.gather(*search_tasks)
         print(f'Search loop ended')
+
         coin_updates.clear()
         terminator.clear()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+

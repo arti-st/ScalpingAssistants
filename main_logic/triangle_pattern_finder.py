@@ -1,21 +1,18 @@
 import os
 from dotenv import load_dotenv
 
-from binance.get_pairs_async import get_trading_symbols
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "params.env"))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "main.env"))
 
 import asyncio
-from binance.klines import get_klines
 from charting.triangle_chart import save_triangle_chart
 
 start_search = 5
 search_window = 30
 
 
-def validate_extremum(e_type: str, e_index: int, e_list: list) -> bool or None:
+def validate_extremum(e_type: str, e_index: int, e_list: list) -> bool | None:
     try:
         if e_type == 'max':
             return e_list[-e_index] == max(e_list[-e_index - 10: -1])
@@ -26,7 +23,7 @@ def validate_extremum(e_type: str, e_index: int, e_list: list) -> bool or None:
 
 
 def hlhl_search(c_high, c_low):
-    range_len = int(os.getenv('MIN_KLINES_LEN'))
+    range_len = int(os.getenv('MIN_KLINES_LEN', 150))
     chart_range = max(c_high[-range_len:]) - min(c_low[-range_len:])
 
     for fourth_point_index in range(start_search, start_search + search_window):
@@ -48,7 +45,7 @@ def hlhl_search(c_high, c_low):
 
 
 def lhlh_search(c_high, c_low):
-    range_len = int(os.getenv('MIN_KLINES_LEN'))
+    range_len = int(os.getenv('MIN_KLINES_LEN', 150))
     chart_range = max(c_high[-range_len:]) - min(c_low[-range_len:])
 
     for fourth_point_index in range(start_search, start_search + search_window):
@@ -163,31 +160,31 @@ async def triangle_found(coin, tf, klines, li=None) -> tuple[bool, str, str]:
     return False, 'Not found', ''
 
 
-if __name__ == '__main__':
-
-    import aiohttp
-
-
-    async def main():
-        # k_lines = await get_klines('ALPINEUSDT', '1m', 'f')
-        # res = await triangle_found(coin='ALPINEUSDT', klines=k_lines)
-        # print(res)
-        #
-
-        async with aiohttp.ClientSession() as session:
-            # Отримуємо всі торгові символи через уніфіковану функцію
-            ts_dict = await get_trading_symbols(session, 'USDT')
-            coins = list(ts_dict.keys())
-
-        for coin in coins:
-            k_lines = await get_klines(coin, '1m', 'f')
-            print(coin, ':')
-            res = await triangle_found(coin=coin, tf='1m', klines=k_lines)
-            if res[0]:
-                print(res[1])
-                print(res[2])
-                print('')
-            await asyncio.sleep(0.5)
+# if __name__ == '__main__':
+#
+#     import aiohttp
+#
+#
+#     async def main():
+#         # k_lines = await get_klines('ALPINEUSDT', '1m', 'f')
+#         # res = await triangle_found(coin='ALPINEUSDT', klines=k_lines)
+#         # print(res)
+#         #
+#
+#         async with aiohttp.ClientSession() as session:
+#             # Отримуємо всі торгові символи через уніфіковану функцію
+#             ts_dict = await get_trading_symbols(session, 'USDT')
+#             coins = list(ts_dict.keys())
+#
+#         for coin in coins:
+#             k_lines = await get_klines(coin, '1m', 'f')
+#             print(coin, ':')
+#             res = await triangle_found(coin=coin, tf='1m', klines=k_lines)
+#             if res[0]:
+#                 print(res[1])
+#                 print(res[2])
+#                 print('')
+#             await asyncio.sleep(0.5)
 
             # for i in range(120, len(k_lines[0])):
             #     res = await triangle_found(coin=coin, tf='1m', klines=k_lines, li=i)
