@@ -4,6 +4,7 @@ from datetime import datetime
 
 from binance.klines import get_klines
 from bot_setup.bot_sender import sender
+from bot_setup.bot_setup import bot
 from mutual_variables.terminator import terminator
 
 TF = int(os.getenv("TF"))
@@ -13,10 +14,16 @@ PRICE_RANGE_WINDOW = int(os.getenv("PRICE_RANGE_WINDOW"))
 PRICE_RANGE_PART = int(os.getenv("PRICE_RANGE_PART"))
 DELTA_WINDOW = int(os.getenv("DELTA_WINDOW"))
 
+async def simple_sender(msg):
+    await bot.send_message(
+        chat_id=os.getenv('CHAT_ID'),
+        text=msg,
+    )
 
 async def divergences_search(coin):
     while not terminator.is_set():
         if datetime.now().minute % TF == 0:
+            nothing = True
             the_klines = await get_klines(coin, f"{TF}m", "s")
 
             if len(the_klines) <= 0:
@@ -48,10 +55,10 @@ async def divergences_search(coin):
                 delta_broke_low = (cumulative_delta[-1] <= min(cumulative_delta[-DELTA_WINDOW:-1]))
 
                 if price_in_upper_range and delta_broke_low:
-                    await sender(f"BUY divergence on {coin} spot. Extremum - {upper_extremum_price}")
+                    await simple_sender(f"BUY divergence on {coin} spot. Extremum - {upper_extremum_price}")
+                    nothing = False
                 else:
-                    print(f"No confirmed upper extremum found for {coin}")
-
+                    print(f"No confirmed bullish divergence found for {coin}")
             else:
                 print(f"No upper extremum found for {coin}")
 
@@ -74,10 +81,10 @@ async def divergences_search(coin):
                 delta_broke_high = (cumulative_delta[-1] >= max(cumulative_delta[-DELTA_WINDOW:-1]))
 
                 if price_in_lower_range and delta_broke_high:
-                    await sender(f"SELL divergence on {coin} spot. Extremum - {lower_extremum_price}")
+                    await simple_sender(f"SELL divergence on {coin} spot. Extremum - {lower_extremum_price}")
+                    nothing = False
                 else:
-                    print(f"No confirmed lower extremum found for {coin}")
-
+                    print(f"No confirmed bearish divergence found for {coin}")
             else:
                 print(f"No lower extremum found for {coin}")
 
