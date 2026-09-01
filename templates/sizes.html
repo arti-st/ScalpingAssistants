@@ -88,6 +88,13 @@
             text-align: center;
         }
 
+        .removed {
+            background: #bdbdbd;
+            color: black;
+            font-weight: bold;
+            text-align: center;
+        }
+
         .open-crossed {
             background: #ffb74d;
             color: black;
@@ -277,7 +284,8 @@
         const breakthroughOrder = {
             "open": 0,
             "open/crossed": 1,
-            "crossed": 2
+            "crossed": 2,
+            "removed": 3
         };
 
         const breakthroughA =
@@ -331,6 +339,14 @@
     }
 
     function getBreakthroughStatus(size) {
+
+        if (!size.active) {
+
+            return {
+                text: "removed",
+                className: "removed"
+            };
+        }
 
         const crossed =
             size.direction === "up"
