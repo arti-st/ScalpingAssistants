@@ -3,8 +3,9 @@ import os
 from datetime import datetime
 from binance.klines import get_klines
 from binance.order_book import order_book
-from .colors_values_update import update_manager, distance_calculator
-from mutual_variables.dictionaries import update_lock, coins_to_ignore
+from database import save_sizes
+# from .colors_values_update import update_manager, distance_calculator
+from .colors_values_update import distance_calculator
 from mutual_variables.terminator import terminator
 
 d_room = int(os.getenv("D_ROOM", 3))
@@ -44,6 +45,7 @@ async def extremum_verification(
 
         # шукаємо відповідний екстремум графіка
         extremum_verified = False
+        verified_extremum_price = None
 
         for extremum in extremums:
             extremum_price = extremum['price']
@@ -58,6 +60,7 @@ async def extremum_verification(
 
             if price_difference_perc <= wiggle_room_perc:
                 extremum_verified = True
+                verified_extremum_price = extremum_price
                 break
 
         if not extremum_verified:
@@ -70,20 +73,45 @@ async def extremum_verification(
         higher_sizes = [depth[k][1] for k in range(depth.index(item) + 1, depth.index(item) + d_room + 1)]
 
         # сайз має бути більшим за всі сусідні сайзи
+        max_neighbor_volume = max(lower_sizes + higher_sizes)
+        size_vs_max_neighbor = item_volume / max_neighbor_volume
+
         if not all(item_volume >= dom * size_mpl for dom in lower_sizes + higher_sizes):
             continue
 
-        new_sizes.append({'price': item_price, 'direction': direction})
+        size_vs_avg_volume = item_volume / avg_vol
 
-    depth_values = {item[0]: item[1] for item in depth}
+        new_sizes.append({
+            'price': item_price,
+            'direction': direction,
+            'extremum_price': verified_extremum_price,
+            'size_vs_max_neighbor': size_vs_max_neighbor,
+            'size_vs_avg_volume': size_vs_avg_volume
+        })
 
-    async with update_lock:
-        await update_manager(new_sizes, coin, bar_close, depth_values)
+    await asyncio.to_thread(
+        save_sizes,
+        coin,
+        new_sizes,
+        bar_close
+    )
+
+    # Старий механізм тимчасово вимкнений
+    #
+    # depth_values = {item[0]: item[1] for item in depth}
+    #
+    # async with update_lock:
+    #     await update_manager(
+    #         new_sizes,
+    #         coin,
+    #         bar_close,
+    #         depth_values
+    #     )
 
 
 async def sizes_search(coin):
     while not terminator.is_set():
-        if datetime.now().second <= 2:
+        if datetime.now().second % 30 == 0:
             depth = await order_book(coin, "s")
             the_klines = await get_klines(coin, "1m", "s")
 

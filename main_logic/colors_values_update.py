@@ -95,7 +95,7 @@ async def update_values(size_price, direction, params, current_price, depth):
     if all([
         params['counter'] >= int(os.getenv('REPEAT_COUNTER', 2)), # updated
         not params['deprecated'], # not deprecated
-        params['distance_value'] <= float(os.getenv('SIGNAL_DIST', 0.4)) # close enough
+        params['distance_value'] <= float(os.getenv('ABS_DIS', 0.4)) # close enough
     ]):
         params['signal'] = status_colors['checked']
         return current_distance

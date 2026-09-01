@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Sizes</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            padding: 9px 8px;
+            border: 1px solid #ddd;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #eee;
+            text-align: center;
+        }
+
+        td:first-child,
+        td:nth-child(2) {
+            text-align: center;
+        }
+
+        th:nth-child(4),
+        td:nth-child(4) {
+            border-right: 3px solid #999;
+        }
+
+        th:nth-child(8),
+        td:nth-child(8) {
+            border-right: 3px solid #999;
+        }
+
+        .up {
+            font-weight: bold;
+        }
+
+        .dn {
+            font-weight: bold;
+        }
+
+        /*
+         * BREAKTHROUGH STATUS
+         */
+
+        .crossed {
+            background: #e57373;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .open {
+            background: #81c784;
+            color: black;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .open-crossed {
+            background: #ffb74d;
+            color: black;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .group-header.signal {
+            width: 33.333%;
+        }
+
+        .group-header.details {
+            width: 33.333%;
+        }
+
+        .group-header.status {
+            width: 33.333%;
+        }
+
+        .group-header {
+            background: #d6d6d6;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .group-header.signal {
+            border-right: 3px solid #999;
+        }
+
+        .group-header.details {
+            border-right: 3px solid #999;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<table>
+
+    <thead>
+        <tr>
+            <th colspan="4" class="group-header signal">Signal</th>
+            <th colspan="4" class="group-header details">Details</th>
+            <th colspan="4" class="group-header status">Status</th>
+        </tr>
+
+        <tr>
+            <th>Date</th>
+            <th>Coin</th>
+            <th>DOM</th>
+            <th>Chart</th>
+
+            <th>Current price</th>
+            <th>Distance</th>
+            <th>to max.DOM</th>
+            <th>to avg.Chart</th>
+
+            <th>First signal</th>
+            <th>Last fixation</th>
+            <th>Counter</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+
+    <tbody id="sizes-table">
+    </tbody>
+
+</table>
+
+
+<script>
+
+    async function updateTable() {
+
+        try {
+
+            const response = await fetch("/api/sizes");
+
+            if (!response.ok) {
+                throw new Error("HTTP " + response.status);
+            }
+
+            const sizes = await response.json();
+
+            sizes.sort(compareSizes);
+
+            const tableBody =
+                document.getElementById("sizes-table");
+
+            tableBody.innerHTML = "";
+
+            for (const size of sizes) {
+
+                const row =
+                    document.createElement("tr");
+
+
+                const directionSymbol =
+                    size.direction === "up"
+                        ? "↗"
+                        : "↘";
+
+
+                const breakthrough = getBreakthroughStatus(size);
+
+
+                row.innerHTML = `
+
+                    <td>
+                        ${formatDate(size.signal_date)}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(size.coin)}
+                    </td>
+
+                    <td>
+                        ${formatNumber(size.size_price)}
+                    </td>
+
+                    <td>
+                        ${formatNumber(size.extremum_price)}
+                    </td>
+
+                    <td>
+                        ${formatNumber(size.current_price)}
+                    </td>
+
+                    <td>
+                        ${directionSymbol}
+                        ${formatNumber(size.distance)}%
+                    </td>
+
+                    <td>
+                        x${formatNumber(size.size_vs_max_neighbor, 1)}
+                    </td>
+
+                    <td>
+                        x${formatNumber(size.size_vs_avg_volume, 1)}
+                    </td>
+
+                    <td>
+                        ${formatTime(size.first_seen)}
+                    </td>
+
+                    <td>
+                        ${formatTime(size.last_seen)}
+                    </td>
+
+                    <td>
+                        ${size.continuous_counter}
+                        (${size.total_counter})
+                    </td>
+
+                    <td class="${breakthrough.className}">
+                        ${breakthrough.text}
+                    </td>
+
+                `;
+
+                tableBody.appendChild(row);
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Failed to update table:",
+                error
+            );
+
+        }
+    }
+
+    function compareSizes(a, b) {
+
+        // 1. Date - newest date first
+        const dateComparison =
+            b.signal_date.localeCompare(a.signal_date);
+
+        if (dateComparison !== 0) {
+            return dateComparison;
+        }
+
+
+        // 2. Breakthrough
+        const breakthroughOrder = {
+            "open": 0,
+            "open/crossed": 1,
+            "crossed": 2
+        };
+
+        const breakthroughA =
+            getBreakthroughStatus(a).text;
+
+        const breakthroughB =
+            getBreakthroughStatus(b).text;
+
+        const breakthroughComparison =
+            breakthroughOrder[breakthroughA]
+            -
+            breakthroughOrder[breakthroughB];
+
+        if (breakthroughComparison !== 0) {
+            return breakthroughComparison;
+        }
+
+
+        // 3. Distance bucket
+        //
+        // 0.24% -> bucket 0
+        // 0.99% -> bucket 0
+        // 1.00% -> bucket 1
+        // 1.73% -> bucket 1
+        // 2.81% -> bucket 2
+
+        const distanceBucketA =
+            Math.floor(Math.abs(a.distance));
+
+        const distanceBucketB =
+            Math.floor(Math.abs(b.distance));
+
+        if (distanceBucketA !== distanceBucketB) {
+            return distanceBucketA - distanceBucketB;
+        }
+
+
+        // 4. Continuous counter - highest first
+        const counterComparison =
+            b.continuous_counter
+            -
+            a.continuous_counter;
+
+        if (counterComparison !== 0) {
+            return counterComparison;
+        }
+
+
+        // 5. First signal - oldest first
+        return a.first_seen.localeCompare(b.first_seen);
+    }
+
+    function getBreakthroughStatus(size) {
+
+        const crossed =
+            size.direction === "up"
+                ? size.current_price > size.size_price
+                : size.current_price < size.size_price;
+
+
+        /*
+         * Current price has crossed the size.
+         */
+        if (crossed) {
+
+            return {
+                text: "crossed",
+                className: "crossed"
+            };
+        }
+
+
+        /*
+         * The signal has previously been crossed,
+         * but currently the price is back on the
+         * open side.
+         */
+        if (size.ever_crossed) {
+
+            return {
+                text: "open/crossed",
+                className: "open-crossed"
+            };
+        }
+
+
+        /*
+         * Size has never been crossed.
+         */
+        return {
+            text: "open",
+            className: "open"
+        };
+    }
+
+
+    function formatDate(value) {
+
+        const parts = value.split("-");
+
+        return (
+            parts[2] +
+            "." +
+            parts[1] +
+            "." +
+            parts[0].slice(2)
+        );
+    }
+
+
+    function formatTime(value) {
+
+        return value.substring(11, 19);
+    }
+
+
+    function formatNumber(value, decimals = 8) {
+
+        return Number(value).toLocaleString(
+            undefined,
+            {
+                maximumFractionDigits: decimals
+            }
+        );
+    }
+
+
+    function escapeHtml(value) {
+
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+
+    updateTable();
+
+    setInterval(updateTable, 1000);
+
+</script>
+
+</body>
+</html>

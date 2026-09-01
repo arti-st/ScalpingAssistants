@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 
+from database import cleanup_old_records
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "params.env"))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "keys.env"))
@@ -43,6 +45,8 @@ async def restart_polling():
 
 
 async def main():
+    # cleanup_old_records(20)
+
     asyncio.create_task(restarter())
     asyncio.create_task(restart_polling())
     last_restart_hour = 0
@@ -78,8 +82,7 @@ async def main():
                                          f"Absolute dis: {os.getenv("ABS_DIS")}\n\n"
                                          f"Size among others: x{os.getenv("SIZE_MPL")}\n"
                                          f"Size x Vol mpl (DOM): x{os.getenv("VOL_MPL_DEPTH")}\n"
-                                         f"Times to repeat: {os.getenv("REPEAT_COUNTER")}\n"
-                                         f"Distance to signal: {os.getenv("SIGNAL_DIST")}%\n\n"
+                                         f"Times to repeat: {os.getenv("REPEAT_COUNTER")}\n\n"
                                          
                                          f"Divergences block:\n"
                                          f"Look for extermum in last: {os.getenv("EXTREMUM_WINDOW")} candles\n"
