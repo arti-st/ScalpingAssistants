@@ -2,3 +2,6 @@
 envs/main.env
 .log
 /envs/keys.env
+__pycache__/
+*.pyc
+.idea/
