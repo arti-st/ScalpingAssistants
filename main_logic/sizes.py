@@ -81,38 +81,23 @@ async def extremum_verification(
         await update_manager(new_sizes, coin, bar_close, depth_values)
 
 
-async def search(coin):
+async def sizes_search(coin):
     while not terminator.is_set():
         if datetime.now().second <= 2:
             depth = await order_book(coin, "s")
-            the_klines = await get_klines(
-                coin,
-                "1m",
-                "s"
-            )
+            the_klines = await get_klines(coin, "1m", "s")
 
             if len(depth) <= 0 or len(the_klines) <= 0:
                 terminator.set()
                 continue
 
-            (
-                c_time,
-                c_open,
-                c_high,
-                c_low,
-                c_close,
-                avg_vol,
-                buy_vol,
-                sell_vol,
-                cumulative_delta,
-                cd_sma
-            ) = the_klines
+            (c_time, c_open, c_high, c_low, c_close, avg_vol, buy_vol, sell_vol, cumulative_delta, cd_sma) = the_klines
 
             depth = depth[1]  # [ціна, об'єм]
             extremums = []
 
             # пошук екстремумів на графіку
-            for i in range(2, len(c_low) - c_room):
+            for i in range(2, len(c_close) - c_room):
 
                 # High extremum
                 if c_high[-i] >= max(c_high[-1: -i - c_room: -1]):
