@@ -16,6 +16,7 @@ from bot_setup.bot_poller import poll
 from main_logic.sizes import *
 from binance.get_pairs_async import *
 from mutual_variables.dictionaries import coin_updates, starting_parameters, coins_to_ignore
+from database import reset_stale_continuous_counters
 
 matplotlib.set_loglevel("WARNING")
 setup_logger(os.path.dirname(__file__))
@@ -40,6 +41,13 @@ async def restart_polling():
         finally:
             await asyncio.sleep(5)
 
+async def stale_counter_cleaner():
+    while True:
+        await asyncio.to_thread(
+            reset_stale_continuous_counters,
+            5
+        )
+        await asyncio.sleep(60)
 
 async def healthcheck_pinger():
     healthcheck_url = os.getenv("HEALTHCHECK_URL")
@@ -69,6 +77,7 @@ async def main():
     asyncio.create_task(healthcheck_pinger())
     asyncio.create_task(restarter())
     asyncio.create_task(restart_polling())
+    asyncio.create_task(stale_counter_cleaner())
     last_restart_hour = 0
 
     while True:

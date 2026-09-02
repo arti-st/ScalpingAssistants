@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 DB_FILE = "sizes.db"
 
@@ -324,6 +324,27 @@ def cleanup_old_records(limit=1000):
                 LIMIT ?
             )
         """, (limit,))
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+def reset_stale_continuous_counters(minutes=5):
+    cutoff = datetime.now() - timedelta(minutes=minutes)
+
+    connection = get_connection()
+
+    try:
+        connection.execute("""
+            UPDATE sizes
+            SET continuous_counter = 0
+            WHERE continuous_counter > 0
+              AND last_seen < ?
+        """, (
+            cutoff.isoformat(timespec="seconds"),
+        ))
 
         connection.commit()
 
