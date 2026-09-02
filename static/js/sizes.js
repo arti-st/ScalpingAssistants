@@ -10,7 +10,33 @@ async function updateTable() {
 
         const sizes = await response.json();
 
-        sizes.sort(compareSizes);
+        // sizes.sort(compareSizes);
+
+        sizes.sort((a, b) => {
+
+            const statusA = getBreakthroughStatus(a);
+            const statusB = getBreakthroughStatus(b);
+
+            console.log(
+                a.coin,
+                "vs",
+                b.coin,
+                "|",
+                statusA.text,
+                "vs",
+                statusB.text
+            );
+
+            const statusOrder = {
+                "open": 0,
+                "open/crossed": 1,
+                "crossed": 2,
+                "n/a": 3
+            };
+
+            return statusOrder[statusA.text] - statusOrder[statusB.text];
+        });
+
 
         const tableBody =
             document.getElementById("sizes-table");
@@ -124,7 +150,7 @@ function compareSizes(a, b) {
         "open": 0,
         "open/crossed": 1,
         "crossed": 2,
-        "removed": 3
+        "n/a": 3
     };
 
     const breakthroughA =
