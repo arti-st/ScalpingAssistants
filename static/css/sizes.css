@@ -144,6 +144,15 @@ td:nth-child(8) {
 }
 
 
+.repeat-highlight td {
+    background: #fff3cd;
+}
+
+.repeat-highlight td:first-child {
+    border-left: 4px solid #f0ad00;
+}
+
+
 /*
  * NIGHT THEME
  */

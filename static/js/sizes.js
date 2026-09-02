@@ -22,6 +22,14 @@ async function updateTable() {
             const row =
                 document.createElement("tr");
 
+            /*
+             * REPEAT COUNTER HIGHLIGHT
+             */
+
+            if (size.continuous_counter >= REPEAT_COUNTER) {
+                row.classList.add("repeat-highlight");
+            }
+
             const directionSymbol =
                 size.direction === "up"
                     ? "↗"
