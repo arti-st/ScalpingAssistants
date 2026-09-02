@@ -1,13 +1,10 @@
 import os
 from dotenv import load_dotenv
 
-from database import cleanup_old_records
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "params.env"))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "keys.env"))
 
-from main_logic.divergences import divergences_search
 from PIL import PngImagePlugin
 
 PngImagePlugin.DEBUG = 0
@@ -44,9 +41,32 @@ async def restart_polling():
             await asyncio.sleep(5)
 
 
+async def healthcheck_pinger():
+    healthcheck_url = os.getenv("HEALTHCHECK_URL")
+
+    if not healthcheck_url:
+        print("HEALTHCHECK_URL is not configured")
+        return
+
+    async with aiohttp.ClientSession() as session:
+        while True:
+            try:
+                async with session.get(healthcheck_url, timeout=30) as response:
+                    if response.status == 200:
+                        print("Healthcheck ping sent successfully")
+                    else:
+                        print(f"Healthcheck ping failed: HTTP {response.status}")
+
+            except Exception as e:
+                print(f"Healthcheck ping error: {e}")
+
+            await asyncio.sleep(600)
+
+
 async def main():
     # cleanup_old_records(20)
 
+    asyncio.create_task(healthcheck_pinger())
     asyncio.create_task(restarter())
     asyncio.create_task(restart_polling())
     last_restart_hour = 0
@@ -70,7 +90,7 @@ async def main():
                                          f"ATR filter: {os.getenv("ATR_FILTER")}\n"
                                          f"Pairs limit: {os.getenv("PAIRS_LIMIT")}\n"
                                          f"Spot verified: {os.getenv("SPOT_VERIFIED")}\n\n"
-                                         
+
                                          f"Sizes block:\n"
                                          f"Depth length: {os.getenv("DEPTH_LEN")}\n"
                                          f"Depth (min) length: {os.getenv("MIN_DEPTH_LEN")}\n"
@@ -83,7 +103,7 @@ async def main():
                                          f"Size among others: x{os.getenv("SIZE_MPL")}\n"
                                          f"Size x Vol mpl (DOM): x{os.getenv("VOL_MPL_DEPTH")}\n"
                                          f"Times to repeat: {os.getenv("REPEAT_COUNTER")}\n\n"
-                                         
+
                                          f"Divergences block:\n"
                                          f"Look for extermum in last: {os.getenv("EXTREMUM_WINDOW")} candles\n"
                                          f"Extr. RttL: {os.getenv("EXTREMUM_ROOM_LEFT")}\n"
@@ -104,5 +124,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
