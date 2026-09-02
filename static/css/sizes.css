@@ -146,6 +146,7 @@ td:nth-child(8) {
 
 .repeat-highlight td {
     background: #fff3cd;
+    color: #000;
 }
 
 .repeat-highlight td:first-child {
@@ -196,4 +197,13 @@ body.dark #theme-toggle {
     background: #333638;
     color: #eee;
     border-color: #555;
+}
+
+body.dark .repeat-highlight td {
+    background: #3f391f;
+    color: #eee;
+}
+
+body.dark .repeat-highlight td:first-child {
+    border-left-color: #f0ad00;
 }

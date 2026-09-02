@@ -5,3 +5,4 @@ envs/main.env
 __pycache__/
 *.pyc
 .idea/
+.idea/ScalpingAssistants.iml
