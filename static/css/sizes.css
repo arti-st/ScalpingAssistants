@@ -145,12 +145,16 @@ td:nth-child(8) {
 
 
 .repeat-highlight td {
-    background: #fff3cd;
+    background: #81c784;
     color: #000;
 }
 
 .repeat-highlight td:first-child {
     border-left: 4px solid #f0ad00;
+}
+
+tbody tr:hover td {
+    background: #f2f2f2;
 }
 
 
@@ -200,10 +204,14 @@ body.dark #theme-toggle {
 }
 
 body.dark .repeat-highlight td {
-    background: #3f391f;
+    background: #81c784;
     color: #eee;
 }
 
 body.dark .repeat-highlight td:first-child {
     border-left-color: #f0ad00;
+}
+
+body.dark tbody tr:hover td {
+    background: #4e5052;
 }

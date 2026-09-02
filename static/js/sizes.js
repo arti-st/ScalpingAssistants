@@ -170,7 +170,7 @@ function compareSizes(a, b) {
 
     // 5. First signal - oldest first
 
-    return a.first_seen.localeCompare(b.first_seen);
+    return b.last_seen.localeCompare(a.last_seen);
 }
 
 
@@ -179,7 +179,7 @@ function getBreakthroughStatus(size) {
     if (!size.active) {
 
         return {
-            text: "removed",
+            text: "n/a",
             className: "removed"
         };
     }
