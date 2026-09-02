@@ -6,5 +6,6 @@ __pycache__/
 *.pyc
 .idea/
 .idea/ScalpingAssistants.iml
+/envs/ignore_coins.csv
 .idea/ScalpingAssistants.iml
 .idea/ScalpingAssistants.iml
