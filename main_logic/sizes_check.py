@@ -116,8 +116,8 @@ class SizesManager:
         for size_price, params in self.new_sizes.items():
             for extr in self.new_extremums:
 
-                lowest_wiggle = extr - extr * wiggle_room_perc
-                highest_wiggle = extr + extr * wiggle_room_perc
+                lowest_wiggle = extr - extr * (wiggle_room_perc / 100)
+                highest_wiggle = extr + extr * (wiggle_room_perc / 100)
 
                 if lowest_wiggle <= size_price <= highest_wiggle:
                     params['chart_price'] = extr
