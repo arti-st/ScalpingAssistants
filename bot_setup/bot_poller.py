@@ -143,6 +143,69 @@ def pad_column(value, width):
     return value + " " * max(0, width - display_width(value))
 
 
+def format_short_list(rows):
+    headers = [
+        "Coin",
+        "DOM",
+        "Dist",
+        "Count",
+    ]
+
+    data = []
+
+    for row in rows:
+        direction = "↑" if row["direction"] == 1 else "↓"
+
+        data.append([
+            row["coin"],
+            f"{row['dom']:.7g}",
+            f"{direction}{row['distance']:.2f}",
+            f"{row['continuous_count']}/{row['total_count']}",
+        ])
+
+    widths = []
+
+    for i, header in enumerate(headers):
+        max_width = display_width(header)
+
+        for row in data:
+            max_width = max(max_width, display_width(row[i]))
+
+        widths.append(max_width)
+
+    lines = []
+
+    lines.append(
+        "`" +
+        "  ".join(
+            pad_column(header, widths[i])
+            for i, header in enumerate(headers)
+        ) +
+        "`"
+    )
+
+    lines.append(
+        "`" +
+        "  ".join(
+            "-" * widths[i]
+            for i in range(len(headers))
+        ) +
+        "`"
+    )
+
+    for row in data:
+        lines.append(
+            "`" +
+            "  ".join(
+                pad_column(value, widths[i])
+                for i, value in enumerate(row)
+            ) +
+            "`"
+        )
+
+    return "\n".join(lines)
+
+
 def format_full_list(rows):
     headers = [
         "Date",

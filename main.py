@@ -1,6 +1,10 @@
 import os
 from dotenv import load_dotenv
-from database_v2 import update_unlisted_coins, create_table, get_coins
+
+from bot_setup.bot_setup import bot
+from database_v2 import update_unlisted_coins, create_table, get_coins, get_open_sizes
+from mutual_variables.terminator import send_alert
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "params.env"))
 load_dotenv(os.path.join(BASE_DIR + '/envs/', "keys.env"))
@@ -13,7 +17,7 @@ import matplotlib
 import traceback
 from datetime import datetime
 from main_log_config import setup_logger
-from bot_setup.bot_poller import poll
+from bot_setup.bot_poller import poll, format_short_list
 from main_logic.sizes_v2 import *
 from binance.get_pairs_async import *
 from mutual_variables.dictionaries import coin_updates, starting_parameters
@@ -40,6 +44,40 @@ async def restart_polling():
             print(traceback)
         finally:
             await asyncio.sleep(5)
+
+
+async def alert_sender():
+    while True:
+
+        if send_alert.is_set():
+            await send_alert.wait()
+
+            rows = await asyncio.to_thread(get_open_sizes)
+
+            if not rows:
+                continue
+
+            text = format_short_list(rows)
+
+            old_message_id = starting_parameters.get('alert_message_id')
+
+            if old_message_id:
+                try:
+                    await bot.delete_message(
+                        chat_id=os.getenv('CHAT_ID'),
+                        message_id=old_message_id
+                    )
+                except Exception:
+                    pass
+
+            message = await bot.send_message(
+                chat_id=os.getenv('CHAT_ID'),
+                text=text,
+                parse_mode="MarkdownV2"
+            )
+
+            starting_parameters['alert_message_id'] = message.message_id
+            send_alert.clear()
 
 
 async def healthcheck_pinger():
@@ -88,10 +126,12 @@ def calculate_reload_time(coins_number: int) -> tuple[int, int]:
 
     return reload_time, repeat_rate
 
+
 async def main():
     asyncio.create_task(healthcheck_pinger())
     asyncio.create_task(restarter())
     asyncio.create_task(restart_polling())
+    asyncio.create_task(alert_sender())
     last_restart_hour = 0
 
     while True:

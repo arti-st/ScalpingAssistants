@@ -2,8 +2,8 @@ import asyncio
 import os
 from datetime import datetime
 
-from bot_setup.bot_sender import simple_sender
 from database_v2 import create_renew_size, change_size_status
+from mutual_variables.terminator import send_alert
 
 d_room = int(os.getenv("D_ROOM"))
 c_room = int(os.getenv("C_ROOM"))
@@ -228,13 +228,14 @@ class SizesManager:
                 distance_within_atr = size_dist <= self.avg_atr
 
                 if repeated_enough_times and didnt_alerted_this_minute and distance_within_atr:
-                    await simple_sender(
-                        f"{self.coin}\n"
-                        f"counter={continuous_count}/{total_count} (repeat rate={repeat_rate})\n"
-                        f"size_price={size_price}\n"
-                        f"size_dist={round(size_dist, 2)}%\n"
-                        f"size_dir={'📈' if size_dir == 1 else '📉'}"
-                    )
+                    send_alert.set()
+                    # starting_parameters['alert_updates'][self.coin] = (
+                    #     f"{self.coin}\n"
+                    #     f"counter={continuous_count}/{total_count} (repeat rate={repeat_rate})\n"
+                    #     f"size_price={size_price}\n"
+                    #     f"size_dist={round(size_dist, 2)}%\n"
+                    #     f"size_dir={'📈' if size_dir == 1 else '📉'}"
+                    # )
                     self.alerts[size_price] = minute
             else:
                 await asyncio.to_thread(change_size_status, self.coin, size_price, 4)
