@@ -246,7 +246,6 @@ async def comm_full_list(message: types.Message):
     )
 
     await message.answer_document(document)
-    await message.answer_document(document)
 
 
 @bot_dispatcher.message(Command(commands=("params",)))
