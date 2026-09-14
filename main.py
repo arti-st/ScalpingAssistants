@@ -99,33 +99,33 @@ async def main():
         if last_restart_hour != datetime.now().hour:
             last_restart_hour = datetime.now().hour
 
-    #     print("Updating pairs")
-    #     await get_pairs_async()
-    #
-    #     print("Pause for 30 seconds")
-    #     await asyncio.sleep(30)
-    #
-    #     await asyncio.to_thread(update_unlisted_coins)
-    #
+        print("Updating pairs")
+        await get_pairs_async()
+
+        print("Pause for 30 seconds")
+        await asyncio.sleep(30)
+
+        await asyncio.to_thread(update_unlisted_coins)
+
         live_coins = get_coins()
+
         starting_parameters['upd_time'] = datetime.now()
         starting_parameters['coins'] = live_coins
-        await asyncio.sleep(6000000)
 
-    #     reload_time, repeat_rate = calculate_reload_time(len(live_coins))
-    #
-    #     print(f'Starting with {len(live_coins)} coins, reload time: {reload_time} and repeat: {repeat_rate}')
-    #
-    #     search_tasks = [
-    #         asyncio.create_task(main_search(coin, params, reload_time, repeat_rate))
-    #         for coin, params in live_coins.items()
-    #     ]
-    #
-    #     await asyncio.gather(*search_tasks)
-    #
-    #     print(f'Search loop ended')
-    #     coin_updates.clear()
-    #     terminator.clear()
+        reload_time, repeat_rate = calculate_reload_time(len(live_coins))
+
+        print(f'Starting with {len(live_coins)} coins, reload time: {reload_time} and repeat: {repeat_rate}')
+
+        search_tasks = [
+            asyncio.create_task(main_search(coin, params, reload_time, repeat_rate))
+            for coin, params in live_coins.items()
+        ]
+
+        await asyncio.gather(*search_tasks)
+
+        print(f'Search loop ended')
+        coin_updates.clear()
+        terminator.clear()
 
 
 if __name__ == "__main__":
