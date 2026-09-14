@@ -13,6 +13,16 @@ def escape_markdown(text):
     return ''.join(f'\\{char}' if char in chars else char for char in str(text))
 
 
+STATUS_LABELS = {
+    1: "Open",
+    2: "Open/Crossed",
+    3: "Too far",
+    4: "Removed",
+    5: "Crossed",
+    6: "Not listed",
+}
+
+
 @bot_dispatcher.message(Command(commands=("coins")))
 async def comm_coins(message: types.Message):
     t = starting_parameters['upd_time']
@@ -31,6 +41,7 @@ async def comm_coins(message: types.Message):
     text = f"`Updated: {updated_time}\n\n{msg}\n`"
 
     await message.answer(text, parse_mode='MarkdownV2')
+
 
 @bot_dispatcher.message(Command(commands=("short_list")))
 async def comm_short_list(message: types.Message):
