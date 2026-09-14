@@ -163,6 +163,63 @@ def get_current_sizes(coin):
     }
 
 
+def get_open_sizes():
+    today = datetime.now().strftime("%d.%m.%y")
+
+    connection = get_connection()
+
+    cursor = connection.execute("""
+        SELECT coin, dom, direction, distance, continuous_count, total_count
+        FROM sizes
+        WHERE date = ? AND status = 1
+        ORDER BY coin, dom
+    """, (today,))
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return rows
+
+
+def get_all_sizes():
+    today = datetime.now().strftime("%d.%m.%y")
+
+    connection = get_connection()
+
+    cursor = connection.execute("""
+        SELECT
+            date,
+            coin,
+            dom,
+            chart,
+            current_price,
+            direction,
+            distance,
+            size_vs_dom,
+            size_vs_avg,
+            first_signal,
+            last_fixation,
+            continuous_count,
+            total_count,
+            status
+        FROM sizes
+        WHERE date = ?
+        ORDER BY
+            date DESC,
+            CASE status WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 3 THEN 3
+                        WHEN 4 THEN 4 WHEN 5 THEN 5 ELSE 6 END ASC,
+            CASE WHEN status IN (1, 2) THEN distance END ASC,
+            CASE WHEN status NOT IN (1, 2) THEN last_fixation END DESC
+    """, (today,))
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return rows
+
+
 def change_size_status(coin, dom, status):
     connection = get_connection()
 

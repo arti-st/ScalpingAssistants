@@ -1,68 +1,262 @@
 import asyncio
 from aiogram import types
 from aiogram.filters import Command
+from aiogram.types import BufferedInputFile
+
 from bot_setup.bot_setup import bot, bot_dispatcher
-from main_logic.colors_values_update import status_colors
-from mutual_variables.dictionaries import coin_updates, starting_parameters
+from database_v2 import get_open_sizes, get_all_sizes
+from mutual_variables.dictionaries import starting_parameters
 
 
-@bot_dispatcher.message(Command(commands=("params")))
-async def comm_params(message: types.Message):
-    p = starting_parameters['params']
-    msg = 'Params is not ready yet!' if p is None else p
-    # Remove the html import and pre tags
-    text = f"`\n{msg}\n`"
-    await message.answer(text, parse_mode='MarkdownV2')
+def escape_markdown(text):
+    chars = r'_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{char}' if char in chars else char for char in str(text))
+
 
 @bot_dispatcher.message(Command(commands=("coins")))
 async def comm_coins(message: types.Message):
     t = starting_parameters['upd_time']
     c = starting_parameters['coins']
 
-    msg = 'Coins is not ready yet!' if c is None else c
-    # Remove the html import and pre tags
-    text = f"`Updated: {t}\n\n{msg}\n`"
+    if c is None:
+        msg = 'Coins is not ready yet!'
+    else:
+        msg = "\n".join(
+            f"{coin}: ts {params['tick_size']:.3f}%, atr {params['avg_atr']:.1f}%"
+            for coin, params in c.items()
+        )
+
+    updated_time = t.strftime("%H:%M:%S") if t else ""
+
+    text = f"`Updated: {updated_time}\n\n{msg}\n`"
+
     await message.answer(text, parse_mode='MarkdownV2')
 
+@bot_dispatcher.message(Command(commands=("short_list")))
+async def comm_short_list(message: types.Message):
+    rows = await asyncio.to_thread(get_open_sizes)
 
-# @bot_dispatcher.message(Command(commands=("list")))
-# async def comm_list(message: types.Message):
-#
-#     # Flatten all updates into one list
-#     all_updates = []
-#     for key, params in coin_updates.items():
-#         coin, price, direction = key
-#         all_updates.append((coin, price, direction, params))
-#
-#     # Sort by numbers['upd_time'] descending
-#     all_updates.sort(key=lambda x: x[3]['updated'], reverse=True)
-#
-#     msg_lines = []
-#     for coin, price, direction, numbers in all_updates:
-#         empty_distances = sum(1 for i in all_updates if i[0] == coin and i[3]['distance_color'] == status_colors['empty'])
-#         empty_sizes = sum(1 for i in all_updates if i[0] == coin and i[3]['size_color'] == status_colors['empty'])
-#         empty_overall = sum(1 for i in all_updates if i[0] == coin and i[3]['deprecated'])
-#
-#         if not numbers['deprecated']:
-#             dir_veb = "🔼" if direction == 'up' else "🔽"
-#
-#             msg = (f"{numbers['updated'].strftime('%H:%M'):^5}"
-#                 f"{coin[:-4]:^8} "
-#                 f"{numbers['counter']:<2} {numbers['signal']}"
-#                 f"{price:^9}"
-#                 f"{dir_veb} {numbers.get('distance_color', 'n/a')} "
-#                 f"{numbers['distance_value']:<5}% {f'{numbers['distance_min']}-{numbers['distance_max']}':<9} "
-#                 f"{numbers.get('size_color', 'n/a')} "
-#                 f"${numbers['size_value']:<3} ({f'{numbers['size_min']}-{numbers['size_max']}':<7}) K\n"
-#                 f"{coin} deprecated: distances={empty_distances}, sizes={empty_sizes}, overall={empty_overall}")
-#
-#             msg_lines.append(msg)
-#
-#     msg = "\n".join(msg_lines) if len(msg_lines) != 0 else 'No recent updates'
-#
-#     # Remove the html import and pre tags
-#     text = f"```\n{msg}\n```"
-#     await message.answer(text, parse_mode='MarkdownV2')
+    if not rows:
+        await message.answer("Open sizes not found.")
+        return
+
+    headers = [
+        "Coin",
+        "DOM",
+        "Dist",
+        "Count",
+    ]
+
+    data = []
+
+    for row in rows:
+        direction = "↑" if row["direction"] == 1 else "↓"
+
+        data.append([
+            row["coin"],
+            f"{row['dom']:.7g}",
+            f"{direction}{row['distance']:.2f}",
+            f"{row['continuous_count']}/{row['total_count']}",
+        ])
+
+    # Визначаємо максимальну ширину кожної колонки
+    widths = []
+
+    for i, header in enumerate(headers):
+        max_width = display_width(header)
+
+        for row in data:
+            max_width = max(max_width, display_width(row[i]))
+
+        widths.append(max_width)
+
+    lines = []
+
+    # Заголовок
+    lines.append(
+        "`" +
+        "  ".join(
+            pad_column(header, widths[i])
+            for i, header in enumerate(headers)
+        ) +
+        "`"
+    )
+
+    # Розділювач
+    lines.append(
+        "`" +
+        "  ".join(
+            "-" * widths[i]
+            for i in range(len(headers))
+        ) +
+        "`"
+    )
+
+    # Дані
+    for row in data:
+        lines.append(
+            "`" +
+            "  ".join(
+                pad_column(value, widths[i])
+                for i, value in enumerate(row)
+            ) +
+            "`"
+        )
+
+    text = "\n".join(lines)
+
+    await message.answer(
+        text,
+        parse_mode="MarkdownV2"
+    )
+
+
+def display_width(value):
+    value = str(value)
+
+    width = 0
+
+    for char in value:
+        # Emoji та інші символи поза BMP займають 2 позиції
+        if ord(char) > 0xFFFF:
+            width += 2
+        else:
+            width += 1
+
+    return width
+
+
+def pad_column(value, width):
+    value = "" if value is None else str(value)
+
+    return value + " " * max(0, width - display_width(value))
+
+
+def format_full_list(rows):
+    headers = [
+        "Date",
+        "Coin",
+        "DOM",
+        "Chart",
+        "Current",
+        "Distance",
+        "S-vs-DOM",
+        "S-vs-Avg",
+        "First",
+        "Recent",
+        "Count",
+        "Status",
+    ]
+
+    data = []
+
+    for row in rows:
+        if row["direction"] == 1:
+            distance = f"📈 {row['distance']}"
+        else:
+            distance = f"📉 {row['distance']}"
+
+        data.append([
+            row["date"],
+            row["coin"],
+            row["dom"],
+            row["chart"],
+            row["current_price"],
+            distance,
+            row["size_vs_dom"],
+            row["size_vs_avg"],
+            row["first_signal"],
+            row["last_fixation"],
+            f"{row['continuous_count']} ({row['total_count']})",
+            STATUS_LABELS.get(row["status"], str(row["status"])),
+        ])
+
+    # Перетворюємо всі значення в текст
+    data = [
+        ["" if value is None else str(value) for value in row]
+        for row in data
+    ]
+
+    # Ширина кожної колонки = найдовше значення
+    # серед заголовка та всіх рядків
+    widths = []
+
+    for i, header in enumerate(headers):
+        max_width = display_width(header)
+
+        for row in data:
+            max_width = max(max_width, display_width(row[i]))
+
+        widths.append(max_width)
+
+    lines = []
+
+    # Заголовок
+    lines.append(
+        "  ".join(
+            pad_column(header, widths[i])
+            for i, header in enumerate(headers)
+        )
+    )
+
+    # Розділювач
+    lines.append(
+        "  ".join(
+            "-" * widths[i]
+            for i in range(len(headers))
+        )
+    )
+
+    # Дані
+    for row in data:
+        lines.append(
+            "  ".join(
+                pad_column(value, widths[i])
+                for i, value in enumerate(row)
+            )
+        )
+
+    return "\n".join(lines)
+
+
+@bot_dispatcher.message(Command(commands=("full_list",)))
+async def comm_full_list(message: types.Message):
+    rows = await asyncio.to_thread(get_all_sizes)
+
+    if not rows:
+        await message.answer("No data.")
+        return
+
+    text = format_full_list(rows)
+
+    document = BufferedInputFile(
+        text.encode("utf-8"),
+        filename="full_list.txt"
+    )
+
+    await message.answer_document(document)
+    await message.answer_document(document)
+
+
+@bot_dispatcher.message(Command(commands=("params",)))
+async def comm_params(message: types.Message):
+    try:
+        with open("envs/params.env", encoding="utf-8") as file:
+            params = file.read().strip()
+
+        if not params:
+            await message.answer("params.env is empty")
+            return
+
+        await message.answer(
+            f"<pre>{params}</pre>",
+            parse_mode="HTML"
+        )
+
+    except FileNotFoundError:
+        await message.answer("File envs/params.env not found")
+    except Exception as e:
+        await message.answer(f"Error reading params.env: {e}")
 
 
 async def poll():
